@@ -38,7 +38,7 @@ function HistoryPage() {
       setLoading(false);
     }
     fetchItems();
-  }, []);
+  }, [userId]);
 
   const rooms = ['All', ...new Set(items.map(i => cap(i.room)).filter(r => r && r !== 'Unknown'))];
   const filtered = filter === 'All' ? items : items.filter(i => cap(i.room) === filter);
