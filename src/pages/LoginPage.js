@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API = 'https://keeep-backend.onrender.com';
+const API = process.env.REACT_APP_API_URL || 'https://keeep-backend.onrender.com';
 
 const C = {
   green:'#00c48c', greenBg:'#f0faf5', greenLight:'#e0f8ef',

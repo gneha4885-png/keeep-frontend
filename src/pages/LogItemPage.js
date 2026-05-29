@@ -5,7 +5,7 @@ import { useSession, logout } from '../hooks/useSession';
 import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
 
-const API = 'https://keeep-backend.onrender.com';
+const API = process.env.REACT_APP_API_URL || 'https://keeep-backend.onrender.com';
 
 const C = {
   green:'#00c48c', greenDark:'#009a6e', greenBg:'#f0faf5',
