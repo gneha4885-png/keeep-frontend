@@ -1,142 +1,196 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useSession, logout } from '../hooks/useSession';
+import BottomNav from '../components/BottomNav';
+import Sidebar from '../components/Sidebar';
 
 const API = 'https://keeep-backend.onrender.com';
 
-function LogItemPage() {
-  const [text, setText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState('');
-  const [lastSaved, setLastSaved] = useState(null);
-  const email = localStorage.getItem('email') || 'User';
-  const userId = localStorage.getItem('user_id') || 'neha123';
+const C = {
+  green:'#00c48c', greenDark:'#009a6e', greenBg:'#f0faf5',
+  greenLight:'#e0f8ef', greenBorder:'#d6ede4',
+  purple:'#6c63ff', red:'#ff6b6b',
+  text:'#0d4d32', textMid:'#5a8070', textLight:'#a0b8b0',
+  white:'#ffffff', inputBg:'#f2fbf7',
+};
 
-  function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 3000); }
+function LogItemPage() {
+  const navigate               = useNavigate();
+  const { email }              = useSession();
+  const [text, setText]        = useState('');
+  const [loading, setLoading]  = useState(false);
+  const [success, setSuccess]  = useState('');
+  const [error, setError]      = useState('');
+  const [listening, setListening] = useState(false);
+  const [recent, setRecent]    = useState([]);
+  const [isMobile, setIsMobile]= useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    fetchRecent();
+    return () => window.removeEventListener('resize', h);
+  }, []);
+
+  async function fetchRecent() {
+    try {
+      const userId = localStorage.getItem('user_id');
+      const res = await axios.get(`${API}/my-items?user_id=${userId}`);
+      setRecent((res.data.items || []).slice(0, 3));
+    } catch (_) {}
+  }
 
   async function handleSave() {
-    if (!text.trim() || text.length < 5) { showToast('Please describe where you kept the item!'); return; }
-    setLoading(true);
+    if (!text.trim()) { setError('Please describe what you kept and where'); return; }
+    setLoading(true); setError(''); setSuccess('');
     try {
-      const response = await axios.post(API + '/log-item', { text, user_id: userId });
-      setLastSaved(response.data);
-      showToast('Saved successfully!');
+      const userId = localStorage.getItem('user_id');
+      await axios.post(API + '/log-item', { text, user_id: userId });
+      setSuccess('✅ Item saved successfully!');
       setText('');
+      fetchRecent();
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      showToast(err.response?.data?.detail || 'Cannot connect to server');
+      if (err.response?.status === 401) { logout(navigate); return; }
+      setError(err.response?.data?.detail || 'Failed to save. Try again.');
     }
     setLoading(false);
   }
 
   function handleVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { showToast('Voice not supported — use Chrome'); return; }
-    const r = new SR();
-    r.lang = 'en-IN';
-    r.onresult = e => { setText(e.results[0][0].transcript); showToast('Voice captured!'); };
-    r.start();
-    showToast('Listening...');
+    if (!SR) { setError('Voice not supported in this browser'); return; }
+    const rec = new SR();
+    rec.lang = 'hi-IN';
+    rec.interimResults = false;
+    rec.onstart  = () => setListening(true);
+    rec.onend    = () => setListening(false);
+    rec.onresult = (e) => setText(e.results[0][0].transcript);
+    rec.onerror  = () => { setListening(false); setError('Voice error. Try again.'); };
+    rec.start();
   }
 
-  const suggestions = [
-    { icon: '💳', text: 'I kept my Aadhaar card in the top drawer of my desk' },
-    { icon: '🔑', text: 'Car keys are on the hook near the main door' },
-    { icon: '💊', text: 'Medicines are in the kitchen cabinet top shelf' },
-    { icon: '📘', text: 'Passport is in the blue folder in the cupboard' },
-  ];
+  const username = (email || '').split('@')[0] || 'there';
 
   return (
-    <div className="app-container">
+    <>
+      <style>{`
+        textarea:focus { border-color: #00c48c !important; background: #fff !important; outline: none !important; }
+        button:active  { opacity: 0.9; }
+      `}</style>
 
-      {/* Header */}
-      <div className="g-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '13px', marginBottom: '3px' }}>Good day 👋</p>
-            <h1 style={{ color: 'white', fontSize: '22px', fontWeight: '700', letterSpacing: '-0.3px' }}>
-              {email.split('@')[0]}
-            </h1>
-          </div>
-          <div style={{
-            width: '42px', height: '42px', background: 'rgba(255,255,255,0.2)',
-            borderRadius: '12px', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', fontSize: '20px'
-          }}>📍</div>
-        </div>
-      </div>
+      <div style={{ minHeight:'100vh', background:C.greenBg, display:'flex', flexDirection:'column', fontFamily:"'Segoe UI',system-ui,sans-serif" }}>
+        <div style={{ height:'3px', background:'linear-gradient(90deg,#00d09c,#6c63ff,#ff6b6b)', flexShrink:0 }} />
 
-      <div style={{ padding: '16px 16px 0' }}>
+        {isMobile ? (
+          <>
+            {/* mobile top bar */}
+            <div style={{ background:C.white, borderBottom:`1px solid ${C.greenBorder}`, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <span style={{ fontSize:'18px', fontWeight:800, color:C.text }}>
+                K<span style={{color:C.green}}>e</span><span style={{color:C.purple}}>e</span><span style={{color:C.red}}>p</span>
+              </span>
+              <button onClick={() => logout(navigate)} style={{ padding:'6px 12px', background:'#fff5f5', border:'1px solid #ffcdd2', borderRadius:'8px', color:'#e53935', fontSize:'12px', fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                Logout
+              </button>
+            </div>
 
-        {/* Last saved */}
-        {lastSaved && (
-          <div className="animate-up" style={{
-            background: 'rgba(45,158,90,0.08)', border: '1px solid rgba(45,158,90,0.2)',
-            borderRadius: '14px', padding: '12px 16px', marginBottom: '12px',
-            display: 'flex', alignItems: 'center', gap: '12px'
-          }}>
-            <span style={{ fontSize: '22px' }}>✅</span>
-            <div>
-              <p style={{ fontSize: '13px', color: '#1a6b3a', fontWeight: '600' }}>Just saved!</p>
-              <p style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>
-                {lastSaved.item_name} → {lastSaved.location}
-              </p>
+            {/* mobile content — all inline */}
+            <div style={{ flex:1, padding:'16px', overflowY:'auto' }}>
+              <div style={{ marginBottom:'20px' }}>
+                <h1 style={{ fontSize:'20px', fontWeight:800, color:C.text }}>Hey {username}! 👋</h1>
+                <p style={{ fontSize:'13px', color:C.textMid, marginTop:'3px' }}>Where did you keep something?</p>
+              </div>
+
+              <div style={{ background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'16px', padding:'20px', marginBottom:'16px' }}>
+                <div style={{ fontSize:'13px', fontWeight:700, color:C.textMid, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'12px' }}>Describe it</div>
+                <textarea
+                  value={text}
+                  onChange={e => setText(e.target.value)}
+                  placeholder="e.g. I kept my passport in the blue drawer in the bedroom..."
+                  style={{ width:'100%', padding:'12px', background:C.inputBg, border:`1.5px solid ${C.greenBorder}`, borderRadius:'12px', fontSize:'14px', color:'#1a1a1a', resize:'none', outline:'none', height:'90px', boxSizing:'border-box', fontFamily:'inherit', cursor:'text' }}
+                />
+                <button onClick={handleVoice} style={{ width:'100%', padding:'11px', marginTop:'8px', background: listening ? '#eeecfe' : '#f0eefe', border:`1.5px solid ${listening ? C.purple : '#c8c3f5'}`, borderRadius:'12px', fontSize:'13px', fontWeight:600, color:C.purple, display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', cursor:'pointer', fontFamily:'inherit' }}>
+                  {listening ? '🔴 Listening...' : '🎤 Tap to speak (Hindi / English)'}
+                </button>
+                {error   && <div style={{ background:'#fff5f5', border:'1px solid #ffcdd2', borderRadius:'10px', padding:'10px', color:'#e53935', fontSize:'12px', marginTop:'10px' }}>{error}</div>}
+                {success && <div style={{ background:C.greenLight, border:`1px solid ${C.greenBorder}`, borderRadius:'10px', padding:'10px', color:C.text, fontSize:'12px', marginTop:'10px' }}>{success}</div>}
+                <button onClick={handleSave} disabled={loading} style={{ width:'100%', padding:'14px', marginTop:'12px', background: loading ? C.greenDark : C.green, color:C.white, border:'none', borderRadius:'12px', fontSize:'14px', fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily:'inherit' }}>
+                  {loading ? '⏳ Saving...' : '📍 Save to Keeep'}
+                </button>
+              </div>
+
+              <div style={{ background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'16px', padding:'20px' }}>
+                <div style={{ fontSize:'13px', fontWeight:700, color:C.textMid, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'12px' }}>Recently logged</div>
+                {recent.length === 0 ? (
+                  <div style={{ textAlign:'center', padding:'24px 0', color:C.textLight, fontSize:'13px' }}>No items yet. Log your first item! 👆</div>
+                ) : recent.map((item, i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'10px', padding:'10px', border:`1px solid ${C.greenBorder}`, borderRadius:'10px', marginBottom:'8px', background:C.greenBg }}>
+                    <div style={{ width:'34px', height:'34px', borderRadius:'9px', background:C.greenLight, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px', flexShrink:0 }}>📦</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:'13px', fontWeight:700, color:C.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.item_name || item.text?.substring(0,30) || 'Item'}</div>
+                      <div style={{ fontSize:'11px', color:C.textMid, marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.location || item.text?.substring(0,50)}</div>
+                      <div style={{ fontSize:'10px', color:C.textLight, marginTop:'2px' }}>{item.timestamp ? new Date(item.timestamp).toLocaleDateString('en-IN') : 'Just now'}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <BottomNav active="log" />
+          </>
+        ) : (
+          /* web layout */
+          <div style={{ display:'flex', flex:1 }}>
+            <Sidebar active="log" />
+
+            {/* web main content — all inline */}
+            <div style={{ flex:1, padding:'28px 32px', overflowY:'auto' }}>
+              <div style={{ marginBottom:'24px' }}>
+                <h1 style={{ fontSize:'24px', fontWeight:800, color:C.text }}>Hey {username}! 👋</h1>
+                <p style={{ fontSize:'13px', color:C.textMid, marginTop:'3px' }}>Where did you keep something?</p>
+              </div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'20px' }}>
+                <div style={{ background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'16px', padding:'20px' }}>
+                  <div style={{ fontSize:'13px', fontWeight:700, color:C.textMid, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'12px' }}>Describe it</div>
+                  <textarea
+                    value={text}
+                    onChange={e => setText(e.target.value)}
+                    placeholder="e.g. I kept my passport in the blue drawer in the bedroom..."
+                    style={{ width:'100%', padding:'12px', background:C.inputBg, border:`1.5px solid ${C.greenBorder}`, borderRadius:'12px', fontSize:'14px', color:'#1a1a1a', resize:'none', outline:'none', height:'90px', boxSizing:'border-box', fontFamily:'inherit', cursor:'text' }}
+                  />
+                  <button onClick={handleVoice} style={{ width:'100%', padding:'11px', marginTop:'8px', background: listening ? '#eeecfe' : '#f0eefe', border:`1.5px solid ${listening ? C.purple : '#c8c3f5'}`, borderRadius:'12px', fontSize:'13px', fontWeight:600, color:C.purple, display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', cursor:'pointer', fontFamily:'inherit' }}>
+                    {listening ? '🔴 Listening...' : '🎤 Tap to speak (Hindi / English)'}
+                  </button>
+                  {error   && <div style={{ background:'#fff5f5', border:'1px solid #ffcdd2', borderRadius:'10px', padding:'10px', color:'#e53935', fontSize:'12px', marginTop:'10px' }}>{error}</div>}
+                  {success && <div style={{ background:C.greenLight, border:`1px solid ${C.greenBorder}`, borderRadius:'10px', padding:'10px', color:C.text, fontSize:'12px', marginTop:'10px' }}>{success}</div>}
+                  <button onClick={handleSave} disabled={loading} style={{ width:'100%', padding:'14px', marginTop:'12px', background: loading ? C.greenDark : C.green, color:C.white, border:'none', borderRadius:'12px', fontSize:'14px', fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily:'inherit' }}>
+                    {loading ? '⏳ Saving...' : '📍 Save to Keeep'}
+                  </button>
+                </div>
+
+                <div style={{ background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'16px', padding:'20px' }}>
+                  <div style={{ fontSize:'13px', fontWeight:700, color:C.textMid, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'12px' }}>Recently logged</div>
+                  {recent.length === 0 ? (
+                    <div style={{ textAlign:'center', padding:'24px 0', color:C.textLight, fontSize:'13px' }}>No items yet. Log your first item! 👆</div>
+                  ) : recent.map((item, i) => (
+                    <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'10px', padding:'10px', border:`1px solid ${C.greenBorder}`, borderRadius:'10px', marginBottom:'8px', background:C.greenBg }}>
+                      <div style={{ width:'34px', height:'34px', borderRadius:'9px', background:C.greenLight, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px', flexShrink:0 }}>📦</div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:'13px', fontWeight:700, color:C.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.item_name || item.text?.substring(0,30) || 'Item'}</div>
+                        <div style={{ fontSize:'11px', color:C.textMid, marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.location || item.text?.substring(0,50)}</div>
+                        <div style={{ fontSize:'10px', color:C.textLight, marginTop:'2px' }}>{item.timestamp ? new Date(item.timestamp).toLocaleDateString('en-IN') : 'Just now'}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
-
-        {/* Input card */}
-        <div className="card animate-up">
-          <div className="label">Where did you keep it?</div>
-          <div style={{ position: 'relative' }}>
-            <textarea className="input-light"
-              value={text} onChange={e => setText(e.target.value)}
-              placeholder="e.g. I kept my passport in the blue drawer in the bedroom..."
-              style={{ height: '110px', resize: 'none', paddingRight: '50px', borderRadius: '12px' }}
-            />
-            <button onClick={handleVoice} style={{
-              position: 'absolute', bottom: '10px', right: '10px',
-              width: '34px', height: '34px',
-              background: 'rgba(26,107,58,0.1)', border: '1px solid rgba(26,107,58,0.2)',
-              borderRadius: '10px', cursor: 'pointer', fontSize: '16px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>🎤</button>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', margin: '8px 0 14px' }}>
-            <span style={{ fontSize: '11px', color: '#ccc' }}>{text.length} / 500</span>
-            {text && <button onClick={() => setText('')} style={{ background: 'none', border: 'none', color: '#999', fontSize: '12px', cursor: 'pointer' }}>Clear</button>}
-          </div>
-          <button className="btn-green" onClick={handleSave} disabled={loading}>
-            {loading ? '✨ Saving with AI...' : 'Save Location'}
-          </button>
-        </div>
-
-        {/* Suggestions */}
-        <div className="card">
-          <div className="label">Quick examples — tap to use</div>
-          {suggestions.map((s, i) => (
-            <div key={i} onClick={() => setText(s.text)} style={{
-              display: 'flex', alignItems: 'center', gap: '12px',
-              padding: '11px 12px', borderRadius: '10px', cursor: 'pointer',
-              marginBottom: i < suggestions.length - 1 ? '6px' : '0',
-              border: '1px solid #f0f5f0', background: '#f9fdf9',
-              transition: 'all 0.15s'
-            }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(26,107,58,0.25)'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = '#f0f5f0'}
-            >
-              <span style={{ width: '32px', height: '32px', background: 'rgba(26,107,58,0.08)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>{s.icon}</span>
-              <span style={{ fontSize: '13px', color: '#666', lineHeight: '1.4' }}>{s.text}</span>
-            </div>
-          ))}
-        </div>
       </div>
-
-      <button onClick={() => { localStorage.clear(); window.location.href = '/'; }}
-        style={{ position: 'fixed', top: '16px', right: '16px', background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', padding: '6px 14px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', zIndex: 999, fontFamily: 'Inter, sans-serif' }}>
-        Logout
-      </button>
-
-      <div className={`toast ${toast ? 'show' : ''}`}>{toast}</div>
-    </div>
+    </>
   );
 }
 

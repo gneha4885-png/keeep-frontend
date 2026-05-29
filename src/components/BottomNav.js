@@ -1,53 +1,71 @@
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
-function BottomNav() {
+const C = {
+  green: '#00c48c', greenLight: '#e0f8ef', greenBorder: '#d6ede4',
+  text: '#0d4d32', textLight: '#a0b8b0', white: '#ffffff',
+};
+
+const NAV_ITEMS = [
+  { icon: '➕', label: 'Log',     path: '/log',     key: 'log'     },
+  { icon: '🔍', label: 'Find',    path: '/find',    key: 'find'    },
+  { icon: '📋', label: 'History', path: '/history', key: 'history' },
+];
+
+function BottomNav({ active }) {
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const tabs = [
-    { path: '/log', label: 'Log', icon: '✏️' },
-    { path: '/find', label: 'Find', icon: '🔍' },
-    { path: '/history', label: 'History', icon: '📋' },
-  ];
 
   return (
     <div style={{
-      position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-      width: '100%', maxWidth: '390px',
-      background: 'white',
-      borderTop: '1px solid #f0f5f0',
-      display: 'flex', zIndex: 100,
-      boxShadow: '0 -4px 16px rgba(0,0,0,0.06)',
-      paddingBottom: 'env(safe-area-inset-bottom)'
+      position: 'sticky',
+      bottom: 0,
+      display: 'flex',
+      background: C.white,
+      borderTop: `1px solid ${C.greenBorder}`,
+      padding: '8px 0 16px',
+      zIndex: 100,
+      boxShadow: '0 -2px 16px rgba(0,80,50,0.06)',
     }}>
-      {tabs.map(tab => {
-        const active = location.pathname === tab.path;
+      {NAV_ITEMS.map(item => {
+        const isActive = active === item.key;
         return (
-          <button key={tab.path} onClick={() => navigate(tab.path)}
+          <button
+            key={item.key}
+            onClick={() => navigate(item.path)}
             style={{
-              flex: 1, padding: '12px 8px 14px',
-              background: 'transparent', border: 'none',
-              color: active ? '#1a6b3a' : '#bbb',
-              cursor: 'pointer', fontSize: '10px',
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: '4px',
-              fontWeight: active ? '600' : '400',
-              transition: 'all 0.2s', position: 'relative',
-              fontFamily: 'Inter, sans-serif',
-              letterSpacing: '0.3px', textTransform: 'uppercase'
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '3px',
+              padding: '6px 0',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: "'Segoe UI', system-ui, sans-serif",
+              position: 'relative',
             }}
           >
-            {active && (
+            {/* active indicator dot */}
+            {isActive && (
               <div style={{
-                position: 'absolute', top: 0, left: '50%',
+                position: 'absolute',
+                top: 0,
+                left: '50%',
                 transform: 'translateX(-50%)',
-                width: '28px', height: '3px',
-                background: 'linear-gradient(90deg, #1a6b3a, #2d9e5a)',
-                borderRadius: '0 0 4px 4px'
+                width: '20px',
+                height: '3px',
+                background: C.green,
+                borderRadius: '0 0 3px 3px',
               }} />
             )}
-            <span style={{ fontSize: '20px' }}>{tab.icon}</span>
-            {tab.label}
+            <span style={{ fontSize: '20px' }}>{item.icon}</span>
+            <span style={{
+              fontSize: '10px',
+              fontWeight: isActive ? 700 : 500,
+              color: isActive ? C.green : C.textLight,
+            }}>
+              {item.label}
+            </span>
           </button>
         );
       })}
