@@ -110,16 +110,17 @@ function LoginPage() {
               <svg width="28" height="28" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="18" r="12" fill="#00c48c"/><circle cx="22" cy="18" r="6" fill="#fff"/><rect x="20.2" y="28" width="3.6" height="10" rx="1.8" fill="#00c48c"/></svg>
             </div>
             <span style={{ fontSize:'26px', fontWeight:800, color:C.text }}>
-              K<span style={{color:C.green}}>e</span><span style={{color:C.purple}}>e</span><span style={{color:C.red}}>p</span>
+             K<span style={{color:C.green}}>e</span><span style={{color:C.purple}}>e</span><span style={{color:C.red}}>e</span>p
             </span>
           </div>
 
           <h1 style={{ fontSize:'36px', fontWeight:800, color:'#0d3d28', lineHeight:1.2, marginBottom:'12px', position:'relative', zIndex:1 }}>
-            Never forget<br/><span style={{color:C.green}}>where you kept</span><br/>things again
-          </h1>
-          <p style={{ fontSize:'14px', color:C.textMid, lineHeight:1.7, marginBottom:'32px', position:'relative', zIndex:1 }}>
-            AI-powered item tracker.<br/>Log with voice or text. Find in seconds.
-          </p>
+  Keeep track of<br/><span style={{ color: C.green }}>everything you own!</span>
+</h1>
+<p style={{ fontSize:'14px', color:C.textMid, lineHeight:1.7, marginBottom:'32px', position:'relative', zIndex:1 }}>
+  Your AI-powered item tracker.<br/>
+  <span style={{ color:C.green, fontWeight:600, fontStyle:'italic' }}>"Log once, find forever"</span>
+</p>
 
           <div style={{ display:'flex', flexDirection:'column', gap:'14px', position:'relative', zIndex:1 }}>
             {[
