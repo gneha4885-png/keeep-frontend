@@ -20,7 +20,7 @@ const FILTERS = ['All', 'Today', 'Yesterday', 'This week'];
 
 function HistoryPage() {
   const navigate                = useNavigate();
-  const { email }               = useSession();
+  useSession();
   const [items, setItems]       = useState([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
@@ -32,11 +32,11 @@ function HistoryPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
-    const h = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', h);
-    fetchItems();
-    return () => window.removeEventListener('resize', h);
-  }, []);
+  const h = () => setIsMobile(window.innerWidth < 768);
+  window.addEventListener('resize', h);
+  fetchItems();
+  return () => window.removeEventListener('resize', h);
+}, []);
 
   async function fetchItems() {
   setLoading(true);

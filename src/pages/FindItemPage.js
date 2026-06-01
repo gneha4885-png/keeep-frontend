@@ -19,7 +19,7 @@ const QUICK_CHIPS = ['Keys 🔑', 'Passport 📘', 'Wallet 👛', 'Charger 🔌'
 
 function FindItemPage() {
   const navigate             = useNavigate();
-  const { email }            = useSession();
+  useSession(); 
   const [query, setQuery]    = useState('');
   const [result, setResult]  = useState(null);
   const [loading, setLoading]= useState(false);
