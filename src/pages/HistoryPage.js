@@ -32,11 +32,14 @@ function HistoryPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
  useEffect(() => {
-    const h = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', h);
-    fetchItems();
-    return () => window.removeEventListener('resize', h);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  fetchItems();
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+useEffect(() => {
+  const h = () => setIsMobile(window.innerWidth < 768);
+  window.addEventListener('resize', h);
+  return () => window.removeEventListener('resize', h);
+}, []);
 
   async function fetchItems() {
   setLoading(true);
