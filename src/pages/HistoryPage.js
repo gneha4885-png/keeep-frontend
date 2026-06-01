@@ -31,12 +31,12 @@ function HistoryPage() {
   const [saving, setSaving]     = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  useEffect(() => {
-  const h = () => setIsMobile(window.innerWidth < 768);
-  window.addEventListener('resize', h);
-  fetchItems();
-  return () => window.removeEventListener('resize', h);
-}, []);
+ useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    fetchItems();
+    return () => window.removeEventListener('resize', h);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchItems() {
   setLoading(true);
