@@ -230,10 +230,14 @@ function LoginPage() {
             <svg width="38" height="38" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="18" r="12" fill="#00c48c"/><circle cx="22" cy="18" r="6" fill="#fff"/><rect x="20.2" y="28" width="3.6" height="10" rx="1.8" fill="#00c48c"/></svg>
           </div>
           <div style={{ fontSize:'28px', fontWeight:800, color:C.text, marginTop:'14px' }}>
-            K<span style={{color:C.green}}>e</span><span style={{color:C.purple}}>e</span><span style={{color:C.red}}>p</span>
-          </div>
-          <div style={{ fontSize:'13px', color:C.textMid, marginTop:'4px' }}>Never forget where you kept things</div>
-        </div>
+  K<span style={{color:C.green}}>e</span><span style={{color:C.purple}}>e</span><span style={{color:C.red}}>e</span>p
+</div>
+          <div style={{ fontSize:'13px', color:C.textMid, marginTop:'4px' }}>
+  Keeep track of everything you own!
+</div>
+<div style={{ fontSize:'12px', color:C.green, fontWeight:600, fontStyle:'italic', marginTop:'4px' }}>
+  "Log once, find forever"
+</div>
 
         {/* form card */}
         <div style={{ margin:'0 16px 24px', background:'rgba(255,255,255,0.95)', borderRadius:'20px', padding:'24px 20px', border:`1px solid ${C.greenBorder}` }}>
