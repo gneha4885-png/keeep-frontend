@@ -11,10 +11,9 @@ const C = {
   white:'#ffffff', inputBg:'#f2fbf7',
 };
 
-// ── defined OUTSIDE LoginPage so they never remount ──────────
 const inp = {
   width: '100%', padding: '13px 14px',
-  background: C.inputBg, border: `1.5px solid ${C.greenBorder}`,
+  background: '#f2fbf7', border: '1.5px solid #d6ede4',
   borderRadius: '12px', fontSize: '14px', color: '#1a1a1a',
   outline: 'none', boxSizing: 'border-box',
   fontFamily: "'Segoe UI', system-ui, sans-serif",
@@ -24,8 +23,8 @@ const inp = {
 const socialBtn = {
   flex: 1, display: 'flex', alignItems: 'center',
   justifyContent: 'center', gap: '7px', padding: '12px',
-  border: `1.5px solid ${C.greenBorder}`, borderRadius: '12px',
-  background: C.white, fontSize: '13px', fontWeight: 500,
+  border: '1.5px solid #d6ede4', borderRadius: '12px',
+  background: '#ffffff', fontSize: '13px', fontWeight: 500,
   color: '#444', cursor: 'pointer',
   fontFamily: "'Segoe UI', system-ui, sans-serif",
 };
@@ -49,19 +48,16 @@ function LoginPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
 
-  // ping server on load
   useEffect(() => {
     axios.get(API + '/health').catch(() => {});
   }, []);
 
-  // responsive
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', h);
     return () => window.removeEventListener('resize', h);
   }, []);
 
-  // skip login if already logged in
   useEffect(() => {
     if (localStorage.getItem('token')) navigate('/log');
   }, [navigate]);
@@ -91,7 +87,7 @@ function LoginPage() {
     setError('');
   }
 
-  // ── WEB ───────────────────────────────────────────────────
+  // ── WEB ──────────────────────────────────────────────────
   if (!isMobile) return (
     <>
       <style>{`
@@ -100,7 +96,7 @@ function LoginPage() {
       `}</style>
       <div style={{ display:'flex', minHeight:'100vh', fontFamily:"'Segoe UI',system-ui,sans-serif" }}>
 
-        {/* LEFT branding */}
+        {/* LEFT */}
         <div style={{ flex:1, background:C.greenBg, padding:'48px', display:'flex', flexDirection:'column', justifyContent:'center', position:'relative', overflow:'hidden' }}>
           <div style={{ position:'absolute', width:'200px', height:'200px', borderRadius:'50%', background:'#00d09c', opacity:0.12, bottom:'-70px', left:'-60px', pointerEvents:'none' }} />
           <div style={{ position:'absolute', width:'100px', height:'100px', borderRadius:'50%', background:'#6c63ff', opacity:0.1, top:'20px', right:'20px', pointerEvents:'none' }} />
@@ -110,17 +106,17 @@ function LoginPage() {
               <svg width="28" height="28" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="18" r="12" fill="#00c48c"/><circle cx="22" cy="18" r="6" fill="#fff"/><rect x="20.2" y="28" width="3.6" height="10" rx="1.8" fill="#00c48c"/></svg>
             </div>
             <span style={{ fontSize:'26px', fontWeight:800, color:C.text }}>
-             K<span style={{color:C.green}}>e</span><span style={{color:C.purple}}>e</span><span style={{color:C.red}}>e</span>p
+              K<span style={{color:C.green}}>e</span><span style={{color:C.purple}}>e</span><span style={{color:C.red}}>e</span>p
             </span>
           </div>
 
           <h1 style={{ fontSize:'36px', fontWeight:800, color:'#0d3d28', lineHeight:1.2, marginBottom:'12px', position:'relative', zIndex:1 }}>
-  Keeep track of<br/><span style={{ color: C.green }}>everything you own!</span>
-</h1>
-<p style={{ fontSize:'14px', color:C.textMid, lineHeight:1.7, marginBottom:'32px', position:'relative', zIndex:1 }}>
-  Your AI-powered item tracker.<br/>
-  <span style={{ color:C.green, fontWeight:600, fontStyle:'italic' }}>"Log once, find forever"</span>
-</p>
+            Keeep track of<br/><span style={{ color: C.green }}>everything you own!</span>
+          </h1>
+          <p style={{ fontSize:'14px', color:C.textMid, lineHeight:1.7, marginBottom:'32px', position:'relative', zIndex:1 }}>
+            Your AI-powered item tracker.<br/>
+            <span style={{ color:C.green, fontWeight:600, fontStyle:'italic' }}>"Log once, find forever"</span>
+          </p>
 
           <div style={{ display:'flex', flexDirection:'column', gap:'14px', position:'relative', zIndex:1 }}>
             {[
@@ -136,12 +132,11 @@ function LoginPage() {
           </div>
         </div>
 
-        {/* RIGHT form — ALL inline JSX, no child components */}
+        {/* RIGHT */}
         <div style={{ width:'400px', flexShrink:0, background:'rgba(255,255,255,0.97)', borderLeft:`1px solid ${C.greenBorder}`, padding:'48px 40px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
           <div style={{ fontSize:'22px', fontWeight:800, color:C.text, marginBottom:'4px' }}>Welcome back 👋</div>
           <div style={{ fontSize:'13px', color:C.textLight, marginBottom:'28px' }}>Sign in to your Keeep account</div>
 
-          {/* tabs — inline */}
           <div style={{ display:'flex', borderBottom:`1.5px solid ${C.greenBorder}`, marginBottom:'20px' }}>
             <button onClick={() => switchTab(true)}
               style={{ flex:1, padding:'10px 0', fontSize:'14px', fontWeight: isLogin ? 700 : 500, color: isLogin ? C.text : C.textLight, background:'none', border:'none', cursor:'pointer', position:'relative', fontFamily:'inherit' }}>
@@ -155,18 +150,15 @@ function LoginPage() {
             </button>
           </div>
 
-          {/* wake toast — inline */}
           {showWake && (
             <div style={{ background:'#fff8e1', border:'1px solid #ffe082', borderRadius:'10px', padding:'10px 14px', fontSize:'12px', color:'#b07800', marginBottom:'16px' }}>
               ⏳ Server warming up, please wait ~20 sec...
             </div>
           )}
 
-          {/* email — plain input, NO span */}
           <input style={inp} type="email" placeholder="Email address"
             value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
 
-          {/* password — plain input, NO span */}
           <input style={inp} type="password" placeholder="Password"
             value={password} onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
@@ -213,7 +205,7 @@ function LoginPage() {
     </>
   );
 
-  // ── MOBILE — all inline JSX ───────────────────────────────
+  // ── MOBILE ───────────────────────────────────────────────
   return (
     <>
       <style>{`
@@ -230,19 +222,19 @@ function LoginPage() {
             <svg width="38" height="38" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="18" r="12" fill="#00c48c"/><circle cx="22" cy="18" r="6" fill="#fff"/><rect x="20.2" y="28" width="3.6" height="10" rx="1.8" fill="#00c48c"/></svg>
           </div>
           <div style={{ fontSize:'28px', fontWeight:800, color:C.text, marginTop:'14px' }}>
-  K<span style={{color:C.green}}>e</span><span style={{color:C.purple}}>e</span><span style={{color:C.red}}>e</span>p
-</div>
+            K<span style={{color:C.green}}>e</span><span style={{color:C.purple}}>e</span><span style={{color:C.red}}>e</span>p
+          </div>
           <div style={{ fontSize:'13px', color:C.textMid, marginTop:'4px' }}>
-  Keeep track of everything you own!
-</div>
-<div style={{ fontSize:'12px', color:C.green, fontWeight:600, fontStyle:'italic', marginTop:'4px' }}>
-  "Log once, find forever"
-</div>
+            Keeep track of everything you own!
+          </div>
+          <div style={{ fontSize:'12px', color:C.green, fontWeight:600, fontStyle:'italic', marginTop:'4px' }}>
+            "Log once, find forever"
+          </div>
+        </div>
 
         {/* form card */}
         <div style={{ margin:'0 16px 24px', background:'rgba(255,255,255,0.95)', borderRadius:'20px', padding:'24px 20px', border:`1px solid ${C.greenBorder}` }}>
 
-          {/* tabs — inline */}
           <div style={{ display:'flex', borderBottom:`1.5px solid ${C.greenBorder}`, marginBottom:'20px' }}>
             <button onClick={() => switchTab(true)}
               style={{ flex:1, padding:'10px 0', fontSize:'14px', fontWeight: isLogin ? 700 : 500, color: isLogin ? C.text : C.textLight, background:'none', border:'none', cursor:'pointer', position:'relative', fontFamily:'inherit' }}>
