@@ -3,7 +3,6 @@ import LoginPage from './pages/LoginPage';
 import LogItemPage from './pages/LogItemPage';
 import FindItemPage from './pages/FindItemPage';
 import HistoryPage from './pages/HistoryPage';
-import BottomNav from './components/BottomNav';
 import './index.css';
 
 function PrivateRoute({ children }) {
@@ -20,22 +19,13 @@ function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/log" element={
-          <PrivateRoute>
-            <LogItemPage />
-            <BottomNav />
-          </PrivateRoute>
+          <PrivateRoute><LogItemPage /></PrivateRoute>
         } />
         <Route path="/find" element={
-          <PrivateRoute>
-            <FindItemPage />
-            <BottomNav />
-          </PrivateRoute>
+          <PrivateRoute><FindItemPage /></PrivateRoute>
         } />
         <Route path="/history" element={
-          <PrivateRoute>
-            <HistoryPage />
-            <BottomNav />
-          </PrivateRoute>
+          <PrivateRoute><HistoryPage /></PrivateRoute>
         } />
       </Routes>
     </BrowserRouter>
