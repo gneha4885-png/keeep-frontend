@@ -29,6 +29,7 @@ function LogItemPage() {
   const [photo, setPhoto]               = useState(null);
   const [photoPreview, setPhotoPreview] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [voiceLang, setVoiceLang]       = useState('en-IN');
   const fileInputRef                    = useRef(null);
   const cameraInputRef                  = useRef(null);
 
@@ -112,7 +113,7 @@ function LogItemPage() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { setError('Voice not supported in this browser'); return; }
     const rec = new SR();
-    rec.lang = 'hi-IN';
+    rec.lang = voiceLang;
     rec.interimResults = false;
     rec.onstart  = () => setListening(true);
     rec.onend    = () => setListening(false);
@@ -191,6 +192,18 @@ function LogItemPage() {
       <textarea value={text} onChange={e => setText(e.target.value)}
         placeholder="e.g. I kept my passport in the blue drawer in the bedroom..."
         style={{ width:'100%', padding:'12px', background:C.inputBg, border:`1.5px solid ${C.greenBorder}`, borderRadius:'12px', fontSize:'14px', color:'#1a1a1a', resize:'none', outline:'none', height:'90px', boxSizing:'border-box', fontFamily:'inherit', cursor:'text' }} />
+
+      {/* Language toggle */}
+      <div style={{ display:'flex', gap:'6px', marginTop:'8px' }}>
+        <button onClick={() => setVoiceLang('en-IN')}
+          style={{ flex:1, padding:'7px', borderRadius:'10px', fontSize:'12px', fontWeight:600, border:'none', cursor:'pointer', fontFamily:'inherit', background: voiceLang==='en-IN' ? C.green : C.greenBg, color: voiceLang==='en-IN' ? '#fff' : C.textMid }}>
+          🇬🇧 English
+        </button>
+        <button onClick={() => setVoiceLang('hi-IN')}
+          style={{ flex:1, padding:'7px', borderRadius:'10px', fontSize:'12px', fontWeight:600, border:'none', cursor:'pointer', fontFamily:'inherit', background: voiceLang==='hi-IN' ? C.purple : C.greenBg, color: voiceLang==='hi-IN' ? '#fff' : C.textMid }}>
+          🇮🇳 हिंदी
+        </button>
+      </div>
 
       <button onClick={handleVoice}
         style={{ width:'100%', padding:'11px', marginTop:'8px', background: listening ? '#eeecfe' : '#f0eefe', border:`1.5px solid ${listening ? C.purple : '#c8c3f5'}`, borderRadius:'12px', fontSize:'13px', fontWeight:600, color:C.purple, display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', cursor:'pointer', fontFamily:'inherit' }}>
