@@ -18,14 +18,15 @@ const C = {
 const FILTERS = ['All', 'Today', 'Yesterday', 'This week'];
 
 // ── ITEM THUMBNAIL — defined OUTSIDE component ────────────
-const ItemThumb = ({ item, size }) => {
+const ItemThumb = ({ item, size, onClick }) => {
   const s = size || 36;
   if (item.photo_url) {
     return (
       <img
         src={item.photo_url}
         alt={item.item_name || 'item'}
-        style={{ width:`${s}px`, height:`${s}px`, borderRadius:'10px', objectFit:'cover', flexShrink:0 }}
+        onClick={onClick}
+        style={{ width:`${s}px`, height:`${s}px`, borderRadius:'10px', objectFit:'cover', flexShrink:0, cursor: onClick ? 'pointer' : 'default' }}
       />
     );
   }
@@ -48,6 +49,7 @@ function HistoryPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [saving, setSaving]     = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [photoModal, setPhotoModal] = useState(null); // ← NEW: photo preview
 
   useEffect(() => {
     fetchItems();
@@ -77,9 +79,7 @@ function HistoryPage() {
     setSaving(true);
     try {
       const userId = localStorage.getItem('user_id');
-      await axios.delete(`${API}/items/${itemId}`, {
-        params: { user_id: userId }
-      });
+      await axios.delete(`${API}/items/${itemId}`, { params: { user_id: userId } });
       setItems(prev => prev.filter(i => (i.id || i.doc_id) !== itemId));
       setDeleteId(null);
     } catch (err) {
@@ -187,7 +187,7 @@ function HistoryPage() {
                     return (
                       <div key={itemId || item.timestamp} style={{ background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'14px', padding:'14px' }}>
                         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'8px' }}>
-                          <ItemThumb item={item} size={34} />
+                          <ItemThumb item={item} size={44} onClick={() => item.photo_url && setPhotoModal(item)} />
                           <div style={{ display:'flex', gap:'6px' }}>
                             <button onClick={() => { setEditItem(item); setEditText(item.item_name || item.text || ''); }}
                               style={{ width:'28px', height:'28px', borderRadius:'7px', background:'#f0eefe', border:'none', cursor:'pointer', fontSize:'13px', display:'flex', alignItems:'center', justifyContent:'center' }}>✏️</button>
@@ -249,7 +249,7 @@ function HistoryPage() {
                     return (
                       <div key={itemId || item.timestamp} style={{ background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'14px', padding:'16px' }}>
                         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'8px' }}>
-                          <ItemThumb item={item} size={36} />
+                          <ItemThumb item={item} size={44} onClick={() => item.photo_url && setPhotoModal(item)} />
                           <div style={{ display:'flex', gap:'6px' }}>
                             <button onClick={() => { setEditItem(item); setEditText(item.item_name || item.text || ''); }}
                               style={{ width:'30px', height:'30px', borderRadius:'8px', background:'#f0eefe', border:'none', cursor:'pointer', fontSize:'14px', display:'flex', alignItems:'center', justifyContent:'center' }} title="Edit">✏️</button>
@@ -275,6 +275,35 @@ function HistoryPage() {
           </div>
         )}
       </div>
+
+      {/* PHOTO PREVIEW MODAL */}
+      {photoModal && (
+        <div onClick={() => setPhotoModal(null)}
+          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', zIndex:2000, padding:'20px', cursor:'pointer' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background:C.white, borderRadius:'20px', overflow:'hidden', maxWidth:'500px', width:'100%', boxShadow:'0 20px 60px rgba(0,0,0,0.4)' }}>
+            <img src={photoModal.photo_url} alt={photoModal.item_name}
+              style={{ width:'100%', maxHeight:'60vh', objectFit:'contain', background:'#000' }} />
+            <div style={{ padding:'16px 20px' }}>
+              <div style={{ fontSize:'16px', fontWeight:800, color:C.text, marginBottom:'4px' }}>
+                {photoModal.item_name}
+              </div>
+              <div style={{ fontSize:'13px', color:C.textMid, marginBottom:'2px' }}>
+                📍 {photoModal.location}
+              </div>
+              <div style={{ fontSize:'12px', color:C.textLight }}>
+                🕐 {photoModal.timestamp ? new Date(photoModal.timestamp).toLocaleString('en-IN') : ''}
+              </div>
+            </div>
+            <div style={{ padding:'0 20px 16px' }}>
+              <button onClick={() => setPhotoModal(null)}
+                style={{ width:'100%', padding:'12px', background:C.green, border:'none', borderRadius:'12px', fontSize:'14px', fontWeight:700, color:'#fff', cursor:'pointer', fontFamily:'inherit' }}>
+                ✕ Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* DELETE MODAL */}
       {deleteId && (
