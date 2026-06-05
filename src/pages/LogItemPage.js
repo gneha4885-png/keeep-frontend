@@ -175,7 +175,7 @@ function LogItemPage() {
           {item.location || item.text?.substring(0,50)}
         </div>
         <div style={{ fontSize:'10px', color:C.textLight, marginTop:'2px' }}>
-          {item.timestamp ? new Date(item.timestamp).toLocaleDateString('en-IN') : 'Just now'}
+          {item.timestamp ? new Date(item.timestamp).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Just now'}
         </div>
       </div>
     </div>

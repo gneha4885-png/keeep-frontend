@@ -197,7 +197,7 @@ function HistoryPage() {
                         </div>
                         <div style={{ fontSize:'13px', fontWeight:700, color:C.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.item_name || item.text?.substring(0,40) || 'Item'}</div>
                         <div style={{ fontSize:'11px', color:C.textMid, marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>📍 {item.location || item.text?.substring(0,50)}</div>
-                        <div style={{ fontSize:'10px', color:C.textLight, marginTop:'2px' }}>🕐 {item.timestamp ? new Date(item.timestamp).toLocaleString('en-IN') : 'Recently'}</div>
+                        <div style={{ fontSize:'10px', color:C.textLight, marginTop:'2px' }}>🕐 {item.timestamp ? new Date(item.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Recently'}</div>
                       </div>
                     );
                   })}
@@ -264,7 +264,7 @@ function HistoryPage() {
                           📍 {item.location || item.text?.substring(0,60)}
                         </div>
                         <div style={{ fontSize:'11px', color:C.textLight }}>
-                          🕐 {item.timestamp ? new Date(item.timestamp).toLocaleString('en-IN') : 'Recently'}
+                          🕐 {item.timestamp ? new Date(item.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Recently'}
                         </div>
                       </div>
                     );
