@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useSession, logout } from '../hooks/useSession';
 import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
+import { formatIST } from '../utils/timeHelper';
 
 const API = process.env.REACT_APP_API_URL || 'https://keeep-backend.onrender.com';
 
@@ -197,7 +198,7 @@ function HistoryPage() {
                         </div>
                         <div style={{ fontSize:'13px', fontWeight:700, color:C.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.item_name || item.text?.substring(0,40) || 'Item'}</div>
                         <div style={{ fontSize:'11px', color:C.textMid, marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>📍 {item.location || item.text?.substring(0,50)}</div>
-                        <div style={{ fontSize:'10px', color:C.textLight, marginTop:'2px' }}>🕐 {item.timestamp ? new Date(item.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Recently'}</div>
+                        <div style={{ fontSize:'10px', color:C.textLight, marginTop:'2px' }}>🕐 {item.timestamp ? new Date(item.timestamp + '+05:30').toLocaleString('en-IN') : 'Recently'}</div>
                       </div>
                     );
                   })}
@@ -264,7 +265,7 @@ function HistoryPage() {
                           📍 {item.location || item.text?.substring(0,60)}
                         </div>
                         <div style={{ fontSize:'11px', color:C.textLight }}>
-                          🕐 {item.timestamp ? new Date(item.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Recently'}
+                          🕐 {item.timestamp ? new Date(item.timestamp + '+05:30').toLocaleString('en-IN') : 'Recently'}
                         </div>
                       </div>
                     );
@@ -292,7 +293,7 @@ function HistoryPage() {
                 📍 {photoModal.location}
               </div>
               <div style={{ fontSize:'12px', color:C.textLight }}>
-                🕐 {photoModal.timestamp ? new Date(photoModal.timestamp).toLocaleString('en-IN') : ''}
+                🕐 {photoModal.timestamp ? new Date(photoModal.timestamp.includes('+') ? photoModal.timestamp : photoModal.timestamp + '+05:30').toLocaleString('en-IN') : ''}
               </div>
             </div>
             <div style={{ padding:'0 20px 16px' }}>

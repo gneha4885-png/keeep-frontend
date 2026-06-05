@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useSession, logout } from '../hooks/useSession';
 import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
+import { formatIST } from '../utils/timeHelper';
 
 const API = process.env.REACT_APP_API_URL || 'https://keeep-backend.onrender.com';
 
@@ -175,7 +176,7 @@ function LogItemPage() {
           {item.location || item.text?.substring(0,50)}
         </div>
         <div style={{ fontSize:'10px', color:C.textLight, marginTop:'2px' }}>
-          {item.timestamp ? new Date(item.timestamp).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Just now'}
+          {item.timestamp ? formatIST(item.timestamp, true) : 'Just now'}
         </div>
       </div>
     </div>
