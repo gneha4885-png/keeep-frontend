@@ -198,7 +198,7 @@ function HistoryPage() {
                         </div>
                         <div style={{ fontSize:'13px', fontWeight:700, color:C.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.item_name || item.text?.substring(0,40) || 'Item'}</div>
                         <div style={{ fontSize:'11px', color:C.textMid, marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>📍 {item.location || item.text?.substring(0,50)}</div>
-                        <div style={{ fontSize:'10px', color:C.textLight, marginTop:'2px' }}>🕐 {item.timestamp ? new Date(item.timestamp + '+05:30').toLocaleString('en-IN') : 'Recently'}</div>
+                        <div style={{ fontSize:'10px', color:C.textLight, marginTop:'2px' }}>🕐 {item.timestamp ? formatIST(item.timestamp) : 'Recently'}</div>
                       </div>
                     );
                   })}
@@ -265,7 +265,7 @@ function HistoryPage() {
                           📍 {item.location || item.text?.substring(0,60)}
                         </div>
                         <div style={{ fontSize:'11px', color:C.textLight }}>
-                          🕐 {item.timestamp ? new Date(item.timestamp + '+05:30').toLocaleString('en-IN') : 'Recently'}
+                          🕐 {item.timestamp ? formatIST(item.timestamp) : 'Recently'}
                         </div>
                       </div>
                     );
@@ -293,7 +293,7 @@ function HistoryPage() {
                 📍 {photoModal.location}
               </div>
               <div style={{ fontSize:'12px', color:C.textLight }}>
-                🕐 {photoModal.timestamp ? new Date(photoModal.timestamp.includes('+') ? photoModal.timestamp : photoModal.timestamp + '+05:30').toLocaleString('en-IN') : ''}
+                🕐 {photoModal.timestamp ? formatIST(photoModal.timestamp) : ''}
               </div>
             </div>
             <div style={{ padding:'0 20px 16px' }}>
