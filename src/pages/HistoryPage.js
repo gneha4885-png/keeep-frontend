@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useSession, logout } from '../hooks/useSession';
 import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
-import { formatIST } from '../utils/timeHelper';
+
 
 const API = process.env.REACT_APP_API_URL || 'https://keeep-backend.onrender.com';
 
@@ -17,6 +17,16 @@ const C = {
 };
 
 const FILTERS = ['All', 'Today', 'Yesterday', 'This week'];
+function formatIST(timestamp, dateOnly = false) {
+  if (!timestamp) return 'Recently';
+  try {
+    const ts = timestamp.includes('+') || timestamp.includes('Z')
+      ? timestamp : timestamp + 'Z';
+    const date = new Date(ts);
+    if (dateOnly) return date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+    return date.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+  } catch { return timestamp; }
+}
 
 // ── ITEM THUMBNAIL — defined OUTSIDE component ────────────
 const ItemThumb = ({ item, size, onClick }) => {
