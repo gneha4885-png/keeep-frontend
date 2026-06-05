@@ -82,7 +82,9 @@ function FindItemPage() {
   const resultCard = result && (
     <div style={{ background:C.greenBg, border:`1.5px solid ${C.green}33`, borderRadius:'16px', padding:'20px', boxShadow:`0 4px 20px ${C.green}15` }}>
       <div style={{ fontSize:'11px', fontWeight:700, color:C.green, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'10px' }}>✅ AI found this</div>
-      <div style={{ fontSize:'20px', fontWeight:800, color:C.text, marginBottom:'6px' }}>{result.item_name || 'Item'}</div>
+      <div style={{ fontSize:'20px', fontWeight:800, color:C.text, marginBottom:'6px' }}>
+  {result.item_name || query || 'Item found!'}
+</div>
       <div style={{ fontSize:'15px', color:C.textMid, marginBottom:'6px', lineHeight:1.5 }}>📍 {result.location || result.answer}</div>
       {result.timestamp && <div style={{ fontSize:'12px', color:C.textLight }}>🕐 Logged on {new Date(result.timestamp).toLocaleString('en-IN')}</div>}
       <div style={{ display:'inline-flex', alignItems:'center', gap:'5px', background:'#eeecfe', borderRadius:'8px', padding:'4px 10px', fontSize:'11px', fontWeight:600, color:C.purple, marginTop:'12px' }}>
@@ -117,7 +119,7 @@ function FindItemPage() {
           <>
             <div style={{ background:C.white, borderBottom:`1px solid ${C.greenBorder}`, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <span style={{ fontSize:'18px', fontWeight:800, color:C.text }}>
-                K<span style={{color:C.green}}>e</span><span style={{color:C.purple}}>e</span><span style={{color:C.red}}>p</span>
+                K<span style={{color:C.green}}>e</span><span style={{color:C.purple}}>e</span><span style={{color:C.red}}>e</span>p
               </span>
               <button onClick={() => logout(navigate)} style={{ padding:'6px 12px', background:'#fff5f5', border:'1px solid #ffcdd2', borderRadius:'8px', color:'#e53935', fontSize:'12px', fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Logout</button>
             </div>

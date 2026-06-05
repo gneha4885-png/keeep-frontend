@@ -35,11 +35,9 @@ function Sidebar({ active, itemCount = 0 }) {
             <rect x="20.2" y="28" width="3.6" height="10" rx="1.8" fill="#00c48c"/>
           </svg>
         </div>
-        <span style={{ fontSize:'20px', fontWeight:800, color:C.text }}>
-          K<span style={{color:C.green}}>e</span>
-          <span style={{color:C.purple}}>e</span>
-          <span style={{color:C.red}}>p</span>
-        </span>
+       <span style={{ fontSize:'22px', fontWeight:800, letterSpacing:'-0.5px' }}>
+  <span style={{color:C.text}}>K</span><span style={{color:C.green}}>e</span><span style={{color:C.purple}}>e</span><span style={{color:C.red}}>e</span><span style={{color:C.text}}>p</span>
+</span>
       </div>
 
       {/* NAV ITEMS */}

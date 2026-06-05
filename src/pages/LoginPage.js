@@ -48,18 +48,28 @@ function LoginPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
 
+  // ping server on load
   useEffect(() => {
     axios.get(API + '/health').catch(() => {});
   }, []);
 
+  // responsive
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', h);
     return () => window.removeEventListener('resize', h);
   }, []);
 
+  // skip login if already logged in + show idle message
   useEffect(() => {
     if (localStorage.getItem('token')) navigate('/log');
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('session') === 'idle') {
+      setError('⏰ You were logged out due to 5 mins of inactivity');
+    } else if (params.get('session') === 'expired') {
+      setError('🔒 Your session expired. Please login again.');
+    }
   }, [navigate]);
 
   async function handleSubmit() {
@@ -175,7 +185,11 @@ function LoginPage() {
             </div>
           )}
 
-          {error && <div style={{ background:'#fff5f5', border:'1px solid #ffcdd2', borderRadius:'10px', padding:'10px 14px', color:'#e53935', fontSize:'13px', marginBottom:'14px' }}>{error}</div>}
+          {error && (
+            <div style={{ background: error.includes('⏰') || error.includes('🔒') ? '#fff8e1' : '#fff5f5', border: `1px solid ${error.includes('⏰') || error.includes('🔒') ? '#ffe082' : '#ffcdd2'}`, borderRadius:'10px', padding:'10px 14px', color: error.includes('⏰') || error.includes('🔒') ? '#b07800' : '#e53935', fontSize:'13px', marginBottom:'14px' }}>
+              {error}
+            </div>
+          )}
 
           <button onClick={handleSubmit} disabled={loading}
             style={{ width:'100%', padding:'15px', background:C.green, color:C.white, border:'none', borderRadius:'14px', fontSize:'15px', fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity: loading ? 0.8 : 1, marginBottom:'4px' }}>
@@ -215,7 +229,6 @@ function LoginPage() {
       <div style={{ minHeight:'100vh', background:C.greenBg, fontFamily:"'Segoe UI',system-ui,sans-serif" }}>
         <div style={{ height:'3px', background:'linear-gradient(90deg,#00d09c,#6c63ff,#ff6b6b)' }} />
 
-        {/* hero */}
         <div style={{ padding:'40px 24px 28px', textAlign:'center', position:'relative', overflow:'hidden' }}>
           <div style={{ position:'absolute', width:'160px', height:'160px', borderRadius:'50%', background:'#00d09c', opacity:0.12, top:'-60px', right:'-50px', pointerEvents:'none' }} />
           <div style={{ width:'72px', height:'72px', background:C.white, borderRadius:'20px', border:`1px solid ${C.greenBorder}`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto', animation:'float 3.5s ease-in-out infinite' }}>
@@ -232,9 +245,7 @@ function LoginPage() {
           </div>
         </div>
 
-        {/* form card */}
         <div style={{ margin:'0 16px 24px', background:'rgba(255,255,255,0.95)', borderRadius:'20px', padding:'24px 20px', border:`1px solid ${C.greenBorder}` }}>
-
           <div style={{ display:'flex', borderBottom:`1.5px solid ${C.greenBorder}`, marginBottom:'20px' }}>
             <button onClick={() => switchTab(true)}
               style={{ flex:1, padding:'10px 0', fontSize:'14px', fontWeight: isLogin ? 700 : 500, color: isLogin ? C.text : C.textLight, background:'none', border:'none', cursor:'pointer', position:'relative', fontFamily:'inherit' }}>
@@ -271,7 +282,11 @@ function LoginPage() {
             </div>
           )}
 
-          {error && <div style={{ background:'#fff5f5', border:'1px solid #ffcdd2', borderRadius:'10px', padding:'10px 14px', color:'#e53935', fontSize:'13px', marginBottom:'14px' }}>{error}</div>}
+          {error && (
+            <div style={{ background: error.includes('⏰') || error.includes('🔒') ? '#fff8e1' : '#fff5f5', border: `1px solid ${error.includes('⏰') || error.includes('🔒') ? '#ffe082' : '#ffcdd2'}`, borderRadius:'10px', padding:'10px 14px', color: error.includes('⏰') || error.includes('🔒') ? '#b07800' : '#e53935', fontSize:'13px', marginBottom:'14px' }}>
+              {error}
+            </div>
+          )}
 
           <button onClick={handleSubmit} disabled={loading}
             style={{ width:'100%', padding:'15px', background:C.green, color:C.white, border:'none', borderRadius:'14px', fontSize:'15px', fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity: loading ? 0.8 : 1, marginBottom:'4px' }}>
