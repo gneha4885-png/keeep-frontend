@@ -30,6 +30,9 @@ function LogItemPage() {
   const [photoPreview, setPhotoPreview] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [voiceLang, setVoiceLang]       = useState('en-IN');
+  const [reminderOn, setReminderOn]   = useState(false);
+  const [reminderDate, setReminderDate] = useState('');
+  const [reminderTime, setReminderTime] = useState('');
   const fileInputRef                    = useRef(null);
   const cameraInputRef                  = useRef(null);
 
@@ -90,14 +93,22 @@ function LogItemPage() {
 
       console.log('📍 Saving with photo_url:', photoUrl);
 
-      await axios.post(API + '/log-item', {
-        text,
-        user_id: userId,
-        photo_url: photoUrl,
-      });
+      const reminderISO = reminderOn && reminderDate && reminderTime
+  ? new Date(`${reminderDate}T${reminderTime}:00`).toISOString()
+  : '';
+
+await axios.post(API + '/log-item', {
+  text,
+  user_id: userId,
+  photo_url: photoUrl,
+  reminder_time: reminderISO,
+});
 
       setSuccess('✅ Item saved successfully!');
       setText('');
+      setReminderOn(false);
+      setReminderDate('');
+      setReminderTime('');
       removePhoto();
       fetchRecent();
       setTimeout(() => setSuccess(''), 3000);
@@ -211,6 +222,34 @@ function LogItemPage() {
       </button>
 
       {photoSection}
+
+{/* REMINDER SECTION */}
+<div style={{ marginTop:'12px', padding:'12px', background:C.greenBg, borderRadius:'12px', border:`1px solid ${C.greenBorder}` }}>
+  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: reminderOn ? '12px' : '0' }}>
+    <div style={{ fontSize:'13px', fontWeight:600, color:C.text }}>🔔 Set a reminder</div>
+    <div onClick={() => setReminderOn(!reminderOn)}
+      style={{ width:'44px', height:'24px', borderRadius:'12px', background: reminderOn ? C.green : '#ccc', cursor:'pointer', position:'relative', transition:'background 0.2s' }}>
+      <div style={{ position:'absolute', top:'2px', left: reminderOn ? '22px' : '2px', width:'20px', height:'20px', borderRadius:'50%', background:'#fff', transition:'left 0.2s' }} />
+    </div>
+  </div>
+
+  {reminderOn && (
+    <div style={{ display:'flex', gap:'8px' }}>
+      <div style={{ flex:1 }}>
+        <div style={{ fontSize:'11px', color:C.textMid, marginBottom:'4px' }}>📅 Date</div>
+        <input type="date" value={reminderDate} onChange={e => setReminderDate(e.target.value)}
+          style={{ width:'100%', padding:'8px', background:C.white, border:`1.5px solid ${C.greenBorder}`, borderRadius:'10px', fontSize:'13px', outline:'none', boxSizing:'border-box', fontFamily:'inherit', cursor:'pointer' }} />
+      </div>
+      <div style={{ flex:1 }}>
+        <div style={{ fontSize:'11px', color:C.textMid, marginBottom:'4px' }}>⏰ Time</div>
+        <input type="time" value={reminderTime} onChange={e => setReminderTime(e.target.value)}
+          style={{ width:'100%', padding:'8px', background:C.white, border:`1.5px solid ${C.greenBorder}`, borderRadius:'10px', fontSize:'13px', outline:'none', boxSizing:'border-box', fontFamily:'inherit', cursor:'pointer' }} />
+      </div>
+    </div>
+  )}
+</div>
+
+
 
       {error   && <div style={{ background:'#fff5f5', border:'1px solid #ffcdd2', borderRadius:'10px', padding:'10px', color:'#e53935', fontSize:'12px', marginTop:'10px' }}>{error}</div>}
       {success && <div style={{ background:C.greenLight, border:`1px solid ${C.greenBorder}`, borderRadius:'10px', padding:'10px', color:C.text, fontSize:'12px', marginTop:'10px' }}>{success}</div>}
