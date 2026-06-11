@@ -3,8 +3,10 @@ import LoginPage from './pages/LoginPage';
 import LogItemPage from './pages/LogItemPage';
 import FindItemPage from './pages/FindItemPage';
 import HistoryPage from './pages/HistoryPage';
+import useReminders from './hooks/useReminders';
 import './index.css';
 
+// ── PrivateRoute: uses localStorage token (matches your useSession) ───────
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -13,21 +15,31 @@ function PrivateRoute({ children }) {
   return children;
 }
 
+// ── Inner app: hooks must be inside a component ───────────────────────────
+function AppRoutes() {
+  useReminders();
+
+  return (
+    <Routes>
+      <Route path="/" element={<LoginPage />} />
+      <Route path="/log" element={
+        <PrivateRoute><LogItemPage /></PrivateRoute>
+      } />
+      <Route path="/find" element={
+        <PrivateRoute><FindItemPage /></PrivateRoute>
+      } />
+      <Route path="/history" element={
+        <PrivateRoute><HistoryPage /></PrivateRoute>
+      } />
+    </Routes>
+  );
+}
+
+// ── Root App ──────────────────────────────────────────────────────────────
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/log" element={
-          <PrivateRoute><LogItemPage /></PrivateRoute>
-        } />
-        <Route path="/find" element={
-          <PrivateRoute><FindItemPage /></PrivateRoute>
-        } />
-        <Route path="/history" element={
-          <PrivateRoute><HistoryPage /></PrivateRoute>
-        } />
-      </Routes>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

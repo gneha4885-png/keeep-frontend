@@ -5,7 +5,6 @@ import { useSession, logout } from '../hooks/useSession';
 import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
 
-
 const API = process.env.REACT_APP_API_URL || 'https://keeep-backend.onrender.com';
 
 const C = {
@@ -61,6 +60,7 @@ function HistoryPage() {
   const [saving, setSaving]     = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [photoModal, setPhotoModal] = useState(null); // ← NEW: photo preview
+  const [recentItems, setRecentItems] = useState([]);
 
   useEffect(() => {
     fetchItems();
