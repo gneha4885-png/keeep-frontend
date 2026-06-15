@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
 import { storage } from '../firebase';
@@ -50,6 +51,25 @@ function scheduleNotification(itemName, location, reminderISO) {
   }, delay);
 }
 
+// ── Photo compression ────────────────────────────────────────
+function compressImage(base64) {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.7).split(',')[1]);
+    };
+    img.onerror = () => resolve(base64);
+    img.src = `data:image/jpeg;base64,${base64}`;
+  });
+}
+
 export default function LogItemPage() {
   const navigate = useNavigate();
   const userId   = localStorage.getItem('user_id');
@@ -64,11 +84,16 @@ export default function LogItemPage() {
     return () => window.removeEventListener('resize', h);
   }, []);
 
+  // form
   const [description, setDescription] = useState('');
   const [loading,     setLoading]     = useState(false);
   const [result,      setResult]      = useState(null);
   const [error,       setError]       = useState('');
 
+  // recently logged
+  const [recentItems, setRecentItems] = useState([]);
+
+  // photo
   const [photoData,    setPhotoData]    = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [showCamera,   setShowCamera]   = useState(false);
@@ -77,11 +102,12 @@ export default function LogItemPage() {
   const streamRef    = useRef(null);
   const fileInputRef = useRef(null);
 
-  // FIX 1: voice state — same as before
+  // voice
   const [isListening, setIsListening] = useState(false);
   const [voiceLang,   setVoiceLang]   = useState('en-IN');
   const recognitionRef = useRef(null);
 
+  // reminder
   const [reminderEnabled,  setReminderEnabled]  = useState(false);
   const [reminderDate,     setReminderDate]      = useState('');
   const [reminderTime,     setReminderTimeState] = useState('');
@@ -89,20 +115,28 @@ export default function LogItemPage() {
     'Notification' in window ? Notification.permission : 'unsupported'
   );
 
-  // FIX 2: default date = TODAY (not tomorrow)
+  // default date = today, time = now + 5 min
   useEffect(() => {
     const now = new Date();
-    setReminderDate(now.toISOString().split('T')[0]); // today
-    // FIX 3: default time = current time + 5 minutes
+    setReminderDate(now.toISOString().split('T')[0]);
     now.setMinutes(now.getMinutes() + 5);
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    setReminderTimeState(`${hh}:${mm}`);
+    setReminderTimeState(`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
   }, []);
 
   useEffect(() => {
     return () => streamRef.current?.getTracks().forEach(t => t.stop());
   }, []);
+
+  // fetch recent items — refetch when new item saved
+  useEffect(() => {
+    const fetchRecent = async () => {
+      try {
+        const res = await axios.get(`${API}/my-items?user_id=${userId}`);
+        setRecentItems((res.data.items || []).slice(0, 5));
+      } catch {}
+    };
+    if (userId) fetchRecent();
+  }, [result]); // eslint-disable-line
 
   // camera
   const openCamera = async () => {
@@ -142,39 +176,31 @@ export default function LogItemPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // upload with compression
   const uploadPhoto = async () => {
     if (!photoData) return null;
     try {
+      const compressed = await compressImage(photoData);
       const sr = ref(storage, `items/${userId}/${Date.now()}.jpg`);
-      await uploadString(sr, photoData, 'base64', { contentType:'image/jpeg' });
+      await uploadString(sr, compressed, 'base64', { contentType:'image/jpeg' });
       return await getDownloadURL(sr);
     } catch { return null; }
   };
 
-  // FIX 4: voice toggle — works correctly
+  // voice
   const toggleVoice = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
+    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { setError('Voice not supported in this browser.'); return; }
     const r = new SR();
-    r.lang = voiceLang;
-    r.continuous = false;
-    r.interimResults = false;
-    r.onresult = e => {
-      const transcript = e.results[0][0].transcript;
-      setDescription(p => p ? p + ' ' + transcript : transcript);
-    };
-    r.onend   = () => setIsListening(false);
+    r.lang = voiceLang; r.continuous = false; r.interimResults = false;
+    r.onresult = e => setDescription(p => p ? p+' '+e.results[0][0].transcript : e.results[0][0].transcript);
+    r.onend = () => setIsListening(false);
     r.onerror = () => setIsListening(false);
-    recognitionRef.current = r;
-    r.start();
-    setIsListening(true);
+    recognitionRef.current = r; r.start(); setIsListening(true);
   };
 
+  // reminder
   const handleReminderToggle = async () => {
     if (!reminderEnabled) {
       const granted = await requestNotifPermission();
@@ -184,12 +210,12 @@ export default function LogItemPage() {
     setReminderEnabled(p => !p);
   };
 
-  // ✅ Fixed — let browser handle timezone
-const buildReminderISO = () => {
-  if (!reminderDate || !reminderTime) return null;
-  return new Date(`${reminderDate}T${reminderTime}:00`).toISOString();
-};
+  const buildReminderISO = () => {
+    if (!reminderDate || !reminderTime) return null;
+    return new Date(`${reminderDate}T${reminderTime}:00`).toISOString();
+  };
 
+  // submit
   const handleSubmit = async () => {
     if (!description.trim()) { setError('Please describe the item and where you kept it.'); return; }
     setLoading(true); setError(''); setResult(null);
@@ -199,45 +225,32 @@ const buildReminderISO = () => {
       const res = await fetch(`${API}/log-item`, {
         method:'POST',
         headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-        body: JSON.stringify({
-          text: description.trim(),
-          user_id: userId,
-          photo_url: photoUrl || '',
-          reminder_time: reminderISO || '',
-        }),
+        body: JSON.stringify({ text:description.trim(), user_id:userId, photo_url:photoUrl||'', reminder_time:reminderISO||'' }),
       });
       if (!res.ok) {
         const e = await res.json().catch(()=>({}));
         throw new Error(typeof e.detail==='string' ? e.detail : JSON.stringify(e.detail)||'Failed to save.');
       }
       const data = await res.json();
-      const clean = {
-        ...data,
-        item_name: stripMarkdown(data.item_name||''),
-        location:  stripMarkdown(data.location||''),
-        notes:     data.notes ? stripMarkdown(data.notes) : '',
-      };
+      const clean = { ...data, item_name:stripMarkdown(data.item_name||''), location:stripMarkdown(data.location||''), notes:data.notes?stripMarkdown(data.notes):'' };
       setResult(clean);
-
-      // FIX 5: schedule notification using reminderISO from frontend
-      // (don't rely on backend response reminder_time)
       if (reminderEnabled && reminderISO && clean.item_name) {
         scheduleNotification(clean.item_name, clean.location, reminderISO);
       }
-
       setDescription(''); setPhotoData(null); setPhotoPreview(null); setReminderEnabled(false);
     } catch (err) {
       setError(err.message || 'Something went wrong.');
     } finally { setLoading(false); }
   };
 
-  const minDate = new Date().toISOString().split('T')[0];
-  const card   = { background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'14px', padding:'16px', marginBottom:'14px' };
-  const sLabel = { fontSize:'10px', fontWeight:700, color:C.textLight, letterSpacing:'1px', marginBottom:'10px', display:'block' };
+  const minDate  = new Date().toISOString().split('T')[0];
+  const card     = { background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'14px', padding:'16px', marginBottom:'14px' };
+  const sLabel   = { fontSize:'10px', fontWeight:700, color:C.textLight, letterSpacing:'1px', marginBottom:'10px', display:'block' };
 
   return (
     <div style={{ display:'flex', minHeight:'100vh', fontFamily:"'Segoe UI',sans-serif" }}>
 
+      {/* Camera Modal */}
       {showCamera && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
           <div style={{ background:'#000', borderRadius:'12px', overflow:'hidden', width:'90%', maxWidth:'480px' }}>
@@ -262,32 +275,24 @@ const buildReminderISO = () => {
 
         <div style={{ padding: isMobile ? '0 16px' : '0 28px', display: isMobile ? 'block' : 'flex', gap:'20px', alignItems:'flex-start' }}>
 
+          {/* Left column */}
           <div style={{ flex:1, maxWidth: isMobile ? '100%' : '520px' }}>
 
-            {/* Describe it */}
+            {/* Describe */}
             <div style={card}>
               <span style={sLabel}>DESCRIBE IT</span>
-              <textarea
-                value={description}
-                onChange={e => setDescription(e.target.value)}
+              <textarea value={description} onChange={e => setDescription(e.target.value)}
                 placeholder={voiceLang==='hi-IN' ? 'जैसे: मैंने पासपोर्ट बेडरूम की दराज में रखा है...' : 'e.g. I kept my passport in the blue drawer in the bedroom...'}
                 rows={3}
                 style={{ width:'100%', background:C.inputBg, border:`1.5px solid ${C.greenBorder}`, borderRadius:'10px', padding:'10px 12px', fontSize:'14px', color:C.text, resize:'vertical', outline:'none', fontFamily:'inherit', boxSizing:'border-box', marginBottom:'10px' }}
               />
               <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
-                {/* Voice button */}
-                <button
-                  onClick={toggleVoice}
-                  style={{ display:'flex', alignItems:'center', gap:'6px', background: isListening ? C.red : C.green, border:'none', borderRadius:'20px', padding:'7px 16px', color:'#fff', fontSize:'13px', fontWeight:600, cursor:'pointer' }}
-                >
+                <button onClick={toggleVoice} style={{ display:'flex', alignItems:'center', gap:'6px', background: isListening ? C.red : C.green, border:'none', borderRadius:'20px', padding:'7px 16px', color:'#fff', fontSize:'13px', fontWeight:600, cursor:'pointer' }}>
                   {isListening ? <MicOff size={14}/> : <Mic size={14}/>}
                   {isListening ? 'Listening…' : (voiceLang==='hi-IN' ? 'बोलें' : 'English')}
                 </button>
-                {/* Lang toggle */}
-                <button
-                  onClick={() => setVoiceLang(p => p==='en-IN' ? 'hi-IN' : 'en-IN')}
-                  style={{ background:C.greenLight, border:`1.5px solid ${C.greenBorder}`, borderRadius:'20px', padding:'7px 14px', fontSize:'13px', fontWeight:600, cursor:'pointer', color:C.text }}
-                >
+                <button onClick={() => setVoiceLang(p => p==='en-IN' ? 'hi-IN' : 'en-IN')}
+                  style={{ background:C.greenLight, border:`1.5px solid ${C.greenBorder}`, borderRadius:'20px', padding:'7px 14px', fontSize:'13px', fontWeight:600, cursor:'pointer', color:C.text }}>
                   {voiceLang==='hi-IN' ? '🇮🇳 Hindi' : 'IN Hindi'}
                 </button>
               </div>
@@ -353,11 +358,7 @@ const buildReminderISO = () => {
               )}
             </div>
 
-            {error && (
-              <div style={{ background:'#fff0f0', border:`1.5px solid ${C.red}`, borderRadius:'10px', padding:'12px 14px', fontSize:'13px', color:'#c62828', marginBottom:'14px' }}>
-                ⚠️ {error}
-              </div>
-            )}
+            {error && <div style={{ background:'#fff0f0', border:`1.5px solid ${C.red}`, borderRadius:'10px', padding:'12px 14px', fontSize:'13px', color:'#c62828', marginBottom:'14px' }}>⚠️ {error}</div>}
 
             {result && (
               <div style={{ background:C.greenLight, border:`1.5px solid ${C.green}`, borderRadius:'14px', padding:'16px', marginBottom:'14px' }}>
@@ -379,20 +380,42 @@ const buildReminderISO = () => {
               style={{ width:'100%', background: loading ? C.textLight : C.green, border:'none', borderRadius:'12px', padding:'14px', color:'#fff', fontSize:'15px', fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', marginBottom:'8px' }}>
               {loading ? '⏳ Saving…' : '📍 Save to Keeep'}
             </button>
-
           </div>
 
+          {/* Right column — Recently Logged */}
           {!isMobile && (
             <div style={{ width:'280px', flexShrink:0 }}>
               <div style={{ background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'14px', padding:'16px' }}>
                 <span style={sLabel}>RECENTLY LOGGED</span>
-                <p style={{ fontSize:'13px', color:C.textLight, margin:0, textAlign:'center', padding:'20px 0' }}>
-                  Your recent items will appear here
-                </p>
+                {recentItems.length === 0 ? (
+                  <p style={{ fontSize:'13px', color:C.textLight, margin:0, textAlign:'center', padding:'20px 0' }}>No items yet</p>
+                ) : (
+                  <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+                    {recentItems.map((item, i) => (
+                      <div key={i} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'8px', background:C.greenBg, borderRadius:'10px', border:`1px solid ${C.greenBorder}` }}>
+                        <div style={{ width:'36px', height:'36px', borderRadius:'8px', background:C.greenLight, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
+                          {item.photo_url
+                            ? <img src={item.photo_url} alt="" style={{ width:'36px', height:'36px', objectFit:'cover' }} />
+                            : <span style={{ fontSize:'18px' }}>📦</span>}
+                        </div>
+                        <div style={{ minWidth:0 }}>
+                          <div style={{ fontSize:'13px', fontWeight:700, color:C.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            {item.item_name || 'Item'}
+                          </div>
+                          <div style={{ fontSize:'11px', color:C.textMid, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            📍 {item.location || ''}
+                          </div>
+                          <div style={{ fontSize:'10px', color:C.textLight }}>
+                            {item.timestamp ? new Date(item.timestamp).toLocaleDateString('en-IN', { timeZone:'Asia/Kolkata' }) : ''}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
-
         </div>
       </div>
 
