@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
 import { storage } from '../firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { Camera, Mic, MicOff, Image, X, CheckCircle } from 'lucide-react';
+import { Camera, Mic, MicOff, Image, X, CheckCircle, Plus, Trash2 } from 'lucide-react';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -14,6 +14,7 @@ const C = {
   greenLight:'#e0f8ef', greenBorder:'#d6ede4',
   text:'#0d4d32', textMid:'#5a8070', textLight:'#a0b8b0',
   white:'#ffffff', inputBg:'#f2fbf7', red:'#ff6b6b',
+  amber:'#f59e0b', amberBg:'#fff8e1', amberBorder:'#ffe0a3',
 };
 
 function stripMarkdown(t) {
@@ -30,6 +31,14 @@ function formatIST(iso) {
   });
 }
 
+function formatTime12h(timeStr) {
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2,'0')} ${period}`;
+}
+
 async function requestNotifPermission() {
   if (!('Notification' in window)) return false;
   if (Notification.permission === 'granted') return true;
@@ -37,6 +46,7 @@ async function requestNotifPermission() {
   return (await Notification.requestPermission()) === 'granted';
 }
 
+// ── One-time reminder notification ─────────────────────────────
 function scheduleNotification(itemName, location, reminderISO) {
   const delay = new Date(reminderISO).getTime() - Date.now();
   if (delay <= 0) return;
@@ -49,6 +59,37 @@ function scheduleNotification(itemName, location, reminderISO) {
       setTimeout(() => n.close(), 10000);
     }
   }, delay);
+}
+
+// ── Recurring medicine notification ─────────────────────────────
+// Schedules a notification for the next occurrence of `timeStr` (HH:MM).
+// If repeatDaily, reschedules itself for 24h later after firing.
+function scheduleMedicineNotification(itemName, location, timeStr, repeatDaily) {
+  const [hh, mm] = timeStr.split(':').map(Number);
+  if (isNaN(hh) || isNaN(mm)) return;
+
+  const now = new Date();
+  let target = new Date();
+  target.setHours(hh, mm, 0, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+  const delay = target.getTime() - now.getTime();
+
+  const fire = () => {
+    if (Notification.permission === 'granted') {
+      const n = new Notification('💊 Medicine Time!', {
+        body: `Time to take "${itemName}" — kept in ${location}`,
+        icon: '/logo192.png',
+        tag: `keeep-med-${itemName}-${timeStr}`,
+      });
+      setTimeout(() => n.close(), 15000);
+    }
+    if (repeatDaily) {
+      // reschedule for next day (24h later)
+      setTimeout(fire, 24 * 60 * 60 * 1000);
+    }
+  };
+
+  setTimeout(fire, delay);
 }
 
 // ── Photo compression ────────────────────────────────────────
@@ -107,15 +148,22 @@ export default function LogItemPage() {
   const [voiceLang,   setVoiceLang]   = useState('en-IN');
   const recognitionRef = useRef(null);
 
-  // reminder
+  // reminder — general
   const [reminderEnabled,  setReminderEnabled]  = useState(false);
-  const [reminderDate,     setReminderDate]      = useState('');
-  const [reminderTime,     setReminderTimeState] = useState('');
+  const [reminderMode,     setReminderMode]     = useState('once'); // 'once' | 'medicine'
   const [notifPermission,  setNotifPermission]   = useState(
     'Notification' in window ? Notification.permission : 'unsupported'
   );
 
-  // default date = today, time = now + 5 min
+  // reminder — one-time
+  const [reminderDate, setReminderDate]     = useState('');
+  const [reminderTime, setReminderTimeState] = useState('');
+
+  // reminder — medicine (multiple times + daily repeat)
+  const [medicineTimes, setMedicineTimes] = useState(['08:00']);
+  const [repeatDaily,   setRepeatDaily]   = useState(true);
+
+  // default date/time for "once" mode
   useEffect(() => {
     const now = new Date();
     setReminderDate(now.toISOString().split('T')[0]);
@@ -200,7 +248,7 @@ export default function LogItemPage() {
     recognitionRef.current = r; r.start(); setIsListening(true);
   };
 
-  // reminder
+  // reminder toggle (master on/off)
   const handleReminderToggle = async () => {
     if (!reminderEnabled) {
       const granted = await requestNotifPermission();
@@ -215,17 +263,53 @@ export default function LogItemPage() {
     return new Date(`${reminderDate}T${reminderTime}:00`).toISOString();
   };
 
+  // medicine time slot helpers
+  const addMedicineTime = () => {
+    setMedicineTimes(prev => [...prev, '12:00']);
+  };
+  const removeMedicineTime = (idx) => {
+    setMedicineTimes(prev => prev.filter((_, i) => i !== idx));
+  };
+  const updateMedicineTime = (idx, value) => {
+    setMedicineTimes(prev => prev.map((t, i) => i === idx ? value : t));
+  };
+
   // submit
   const handleSubmit = async () => {
     if (!description.trim()) { setError('Please describe the item and where you kept it.'); return; }
     setLoading(true); setError(''); setResult(null);
     try {
-      const photoUrl    = photoData ? await uploadPhoto() : null;
-      const reminderISO = reminderEnabled ? buildReminderISO() : null;
+      const photoUrl = photoData ? await uploadPhoto() : null;
+
+      // Build reminder payload based on mode
+      let reminderISO = '';
+      let isMedicine = false;
+      let reminderTimes = [];
+      let repeatType = '';
+
+      if (reminderEnabled) {
+        if (reminderMode === 'once') {
+          reminderISO = buildReminderISO();
+        } else {
+          // medicine mode
+          isMedicine = true;
+          reminderTimes = medicineTimes.filter(t => t); // remove empty
+          repeatType = repeatDaily ? 'daily' : '';
+        }
+      }
+
       const res = await fetch(`${API}/log-item`, {
         method:'POST',
         headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-        body: JSON.stringify({ text:description.trim(), user_id:userId, photo_url:photoUrl||'', reminder_time:reminderISO||'' }),
+        body: JSON.stringify({
+          text: description.trim(),
+          user_id: userId,
+          photo_url: photoUrl || '',
+          reminder_time: reminderISO || '',
+          is_medicine: isMedicine,
+          reminder_times: reminderTimes,
+          repeat_type: repeatType,
+        }),
       });
       if (!res.ok) {
         const e = await res.json().catch(()=>({}));
@@ -234,10 +318,20 @@ export default function LogItemPage() {
       const data = await res.json();
       const clean = { ...data, item_name:stripMarkdown(data.item_name||''), location:stripMarkdown(data.location||''), notes:data.notes?stripMarkdown(data.notes):'' };
       setResult(clean);
-      if (reminderEnabled && reminderISO && clean.item_name) {
-        scheduleNotification(clean.item_name, clean.location, reminderISO);
+
+      // Schedule notifications
+      if (reminderEnabled && clean.item_name) {
+        if (reminderMode === 'once' && reminderISO) {
+          scheduleNotification(clean.item_name, clean.location, reminderISO);
+        } else if (reminderMode === 'medicine') {
+          reminderTimes.forEach(t => scheduleMedicineNotification(clean.item_name, clean.location, t, repeatDaily));
+        }
       }
-      setDescription(''); setPhotoData(null); setPhotoPreview(null); setReminderEnabled(false);
+
+      // reset form
+      setDescription(''); setPhotoData(null); setPhotoPreview(null);
+      setReminderEnabled(false); setReminderMode('once');
+      setMedicineTimes(['08:00']); setRepeatDaily(true);
     } catch (err) {
       setError(err.message || 'Something went wrong.');
     } finally { setLoading(false); }
@@ -321,7 +415,7 @@ export default function LogItemPage() {
               )}
             </div>
 
-            {/* Reminder */}
+            {/* ── Reminder card ── */}
             <div style={card}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: reminderEnabled ? '12px' : 0 }}>
                 <span style={{ ...sLabel, marginBottom:0 }}>🔔 SET A REMINDER</span>
@@ -329,29 +423,91 @@ export default function LogItemPage() {
                   <div style={{ position:'absolute', top:'3px', width:'20px', height:'20px', borderRadius:'50%', background:'#fff', boxShadow:'0 1px 3px rgba(0,0,0,0.25)', transition:'transform 0.2s', transform: reminderEnabled ? 'translateX(22px)' : 'translateX(2px)' }} />
                 </div>
               </div>
+
               {reminderEnabled && (
                 <div>
-                  <p style={{ fontSize:'12px', color:C.textMid, margin:'0 0 10px' }}>📱 We'll notify you at this time (IST)</p>
-                  <div style={{ display:'flex', gap:'10px', flexWrap:'wrap', marginBottom:'8px' }}>
-                    <div style={{ flex:1, minWidth:'120px' }}>
-                      <div style={{ fontSize:'11px', fontWeight:600, color:C.textLight, marginBottom:'4px' }}>📅 Date</div>
-                      <input type="date" min={minDate} value={reminderDate} onChange={e => setReminderDate(e.target.value)}
-                        style={{ width:'100%', background:C.inputBg, border:`1.5px solid ${C.greenBorder}`, borderRadius:'8px', padding:'8px 10px', fontSize:'13px', color:C.text, outline:'none', boxSizing:'border-box' }} />
-                    </div>
-                    <div style={{ flex:1, minWidth:'120px' }}>
-                      <div style={{ fontSize:'11px', fontWeight:600, color:C.textLight, marginBottom:'4px' }}>⏰ Time</div>
-                      <input type="time" value={reminderTime} onChange={e => setReminderTimeState(e.target.value)}
-                        style={{ width:'100%', background:C.inputBg, border:`1.5px solid ${C.greenBorder}`, borderRadius:'8px', padding:'8px 10px', fontSize:'13px', color:C.text, outline:'none', boxSizing:'border-box' }} />
-                    </div>
+                  {/* Mode selector */}
+                  <div style={{ display:'flex', gap:'8px', marginBottom:'14px' }}>
+                    <button onClick={() => setReminderMode('once')}
+                      style={{ flex:1, padding:'9px', borderRadius:'10px', border: reminderMode==='once' ? `1.5px solid ${C.green}` : `1.5px solid ${C.greenBorder}`, background: reminderMode==='once' ? C.greenLight : C.white, color: reminderMode==='once' ? C.greenDark : C.textMid, fontSize:'13px', fontWeight:700, cursor:'pointer' }}>
+                      📦 One-time
+                    </button>
+                    <button onClick={() => setReminderMode('medicine')}
+                      style={{ flex:1, padding:'9px', borderRadius:'10px', border: reminderMode==='medicine' ? `1.5px solid ${C.amber}` : `1.5px solid ${C.greenBorder}`, background: reminderMode==='medicine' ? C.amberBg : C.white, color: reminderMode==='medicine' ? '#b45309' : C.textMid, fontSize:'13px', fontWeight:700, cursor:'pointer' }}>
+                      💊 Medicine
+                    </button>
                   </div>
-                  {notifPermission==='denied' && (
-                    <p style={{ background:'#fff8e1', border:'1px solid #ffd54f', borderRadius:'6px', padding:'8px', fontSize:'12px', color:'#795548', margin:'0 0 8px' }}>
-                      ⚠️ Notifications blocked. Enable in browser → Site Settings → Notifications.
-                    </p>
+
+                  {/* ONE-TIME mode */}
+                  {reminderMode === 'once' && (
+                    <div>
+                      <p style={{ fontSize:'12px', color:C.textMid, margin:'0 0 10px' }}>📱 We'll notify you at this time (IST)</p>
+                      <div style={{ display:'flex', gap:'10px', flexWrap:'wrap', marginBottom:'8px' }}>
+                        <div style={{ flex:1, minWidth:'120px' }}>
+                          <div style={{ fontSize:'11px', fontWeight:600, color:C.textLight, marginBottom:'4px' }}>📅 Date</div>
+                          <input type="date" min={minDate} value={reminderDate} onChange={e => setReminderDate(e.target.value)}
+                            style={{ width:'100%', background:C.inputBg, border:`1.5px solid ${C.greenBorder}`, borderRadius:'8px', padding:'8px 10px', fontSize:'13px', color:C.text, outline:'none', boxSizing:'border-box' }} />
+                        </div>
+                        <div style={{ flex:1, minWidth:'120px' }}>
+                          <div style={{ fontSize:'11px', fontWeight:600, color:C.textLight, marginBottom:'4px' }}>⏰ Time</div>
+                          <input type="time" value={reminderTime} onChange={e => setReminderTimeState(e.target.value)}
+                            style={{ width:'100%', background:C.inputBg, border:`1.5px solid ${C.greenBorder}`, borderRadius:'8px', padding:'8px 10px', fontSize:'13px', color:C.text, outline:'none', boxSizing:'border-box' }} />
+                        </div>
+                      </div>
+                      {reminderDate && reminderTime && (
+                        <p style={{ fontSize:'12px', color:C.textMid, margin:0, background:C.greenLight, padding:'8px 10px', borderRadius:'6px', border:`1px solid ${C.greenBorder}` }}>
+                          Will remind on <strong style={{ color:C.text }}>{new Date(`${reminderDate}T${reminderTime}`).toLocaleString('en-IN',{ day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</strong>
+                        </p>
+                      )}
+                    </div>
                   )}
-                  {reminderDate && reminderTime && (
-                    <p style={{ fontSize:'12px', color:C.textMid, margin:0, background:C.greenLight, padding:'8px 10px', borderRadius:'6px', border:`1px solid ${C.greenBorder}` }}>
-                      Will remind on <strong style={{ color:C.text }}>{new Date(`${reminderDate}T${reminderTime}`).toLocaleString('en-IN',{ day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</strong>
+
+                  {/* MEDICINE mode */}
+                  {reminderMode === 'medicine' && (
+                    <div>
+                      <p style={{ fontSize:'12px', color:C.textMid, margin:'0 0 10px' }}>💊 Set times — we'll remind you every day</p>
+
+                      <div style={{ display:'flex', flexDirection:'column', gap:'8px', marginBottom:'10px' }}>
+                        {medicineTimes.map((t, idx) => (
+                          <div key={idx} style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+                            <input type="time" value={t} onChange={e => updateMedicineTime(idx, e.target.value)}
+                              style={{ flex:1, background:C.inputBg, border:`1.5px solid ${C.greenBorder}`, borderRadius:'8px', padding:'8px 10px', fontSize:'13px', color:C.text, outline:'none', boxSizing:'border-box' }} />
+                            {medicineTimes.length > 1 && (
+                              <button onClick={() => removeMedicineTime(idx)}
+                                style={{ width:'34px', height:'34px', borderRadius:'8px', background:'#fff0f0', border:'1px solid #ffcccc', color:C.red, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                                <Trash2 size={14}/>
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      <button onClick={addMedicineTime}
+                        style={{ display:'flex', alignItems:'center', gap:'6px', background:C.greenLight, border:`1.5px dashed ${C.green}`, borderRadius:'10px', padding:'8px 14px', fontSize:'13px', fontWeight:600, color:C.greenDark, cursor:'pointer', marginBottom:'12px' }}>
+                        <Plus size={14}/> Add another time
+                      </button>
+
+                      {/* Repeat daily toggle */}
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 12px', background:C.amberBg, border:`1px solid ${C.amberBorder}`, borderRadius:'10px', marginBottom:'10px' }}>
+                        <span style={{ fontSize:'13px', fontWeight:600, color:'#92600a' }}>🔁 Repeat daily</span>
+                        <div onClick={() => setRepeatDaily(p => !p)} style={{ width:'40px', height:'22px', borderRadius:'11px', background: repeatDaily ? C.amber : '#ccc', cursor:'pointer', position:'relative', transition:'background 0.2s', flexShrink:0 }}>
+                          <div style={{ position:'absolute', top:'2px', width:'18px', height:'18px', borderRadius:'50%', background:'#fff', boxShadow:'0 1px 3px rgba(0,0,0,0.25)', transition:'transform 0.2s', transform: repeatDaily ? 'translateX(20px)' : 'translateX(2px)' }} />
+                        </div>
+                      </div>
+
+                      {/* Preview */}
+                      <p style={{ fontSize:'12px', color:C.textMid, margin:0, background:C.greenLight, padding:'8px 10px', borderRadius:'6px', border:`1px solid ${C.greenBorder}` }}>
+                        {repeatDaily ? '🔁 Every day at' : '⏰ Today at'}{' '}
+                        <strong style={{ color:C.text }}>
+                          {medicineTimes.filter(Boolean).map(formatTime12h).join(', ')}
+                        </strong>
+                      </p>
+                    </div>
+                  )}
+
+                  {notifPermission==='denied' && (
+                    <p style={{ background:'#fff8e1', border:'1px solid #ffd54f', borderRadius:'6px', padding:'8px', fontSize:'12px', color:'#795548', margin:'8px 0 0' }}>
+                      ⚠️ Notifications blocked. Enable in browser → Site Settings → Notifications.
                     </p>
                   )}
                 </div>
@@ -392,13 +548,13 @@ export default function LogItemPage() {
                 ) : (
                   <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
                     {recentItems.map((item, i) => (
-                      <div key={i} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'8px', background:C.greenBg, borderRadius:'10px', border:`1px solid ${C.greenBorder}` }}>
+                      <div key={i} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'8px', background:C.greenBg, borderRadius:'10px', border:`1px solid ${C.greenBorder}`, position:'relative' }}>
                         <div style={{ width:'36px', height:'36px', borderRadius:'8px', background:C.greenLight, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
                           {item.photo_url
                             ? <img src={item.photo_url} alt="" style={{ width:'36px', height:'36px', objectFit:'cover' }} />
-                            : <span style={{ fontSize:'18px' }}>📦</span>}
+                            : <span style={{ fontSize:'18px' }}>{item.is_medicine ? '💊' : '📦'}</span>}
                         </div>
-                        <div style={{ minWidth:0 }}>
+                        <div style={{ minWidth:0, flex:1 }}>
                           <div style={{ fontSize:'13px', fontWeight:700, color:C.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                             {item.item_name || 'Item'}
                           </div>
@@ -409,6 +565,11 @@ export default function LogItemPage() {
                             {item.timestamp ? new Date(item.timestamp).toLocaleDateString('en-IN', { timeZone:'Asia/Kolkata' }) : ''}
                           </div>
                         </div>
+                        {item.is_medicine && item.reminder_times?.length > 0 && (
+                          <div style={{ fontSize:'9px', fontWeight:700, color:'#b45309', background:C.amberBg, border:`1px solid ${C.amberBorder}`, borderRadius:'6px', padding:'2px 5px', whiteSpace:'nowrap', flexShrink:0 }}>
+                            🔁 {item.reminder_times.length}x
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
