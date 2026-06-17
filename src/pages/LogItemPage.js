@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
@@ -23,13 +22,6 @@ function stripMarkdown(t) {
           .replace(/\n{2,}/g,'\n').trim();
 }
 
-function formatIST(iso) {
-  if (!iso) return '';
-  return new Date(iso).toLocaleString('en-IN', {
-    timeZone:'Asia/Kolkata', day:'2-digit', month:'short',
-    year:'numeric', hour:'2-digit', minute:'2-digit',
-  });
-}
 
 function formatTime12h(timeStr) {
   if (!timeStr) return '';
@@ -112,7 +104,6 @@ function compressImage(base64) {
 }
 
 export default function LogItemPage() {
-  const navigate = useNavigate();
   const userId   = localStorage.getItem('user_id');
   const token    = localStorage.getItem('token');
   const email    = localStorage.getItem('email') || '';
