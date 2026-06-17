@@ -332,8 +332,8 @@ export default function LogItemPage() {
   const card     = { background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'14px', padding:'16px', marginBottom:'14px' };
   const sLabel   = { fontSize:'10px', fontWeight:700, color:C.textLight, letterSpacing:'1px', marginBottom:'10px', display:'block' };
 
-  return (
-    <div style={{ display:'flex', minHeight:'100vh', fontFamily:"'Segoe UI',sans-serif" }}>
+ return (
+    <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', minHeight:'100vh', fontFamily:"'Segoe UI',sans-serif" }}>
 
       {/* Camera Modal */}
       {showCamera && (
@@ -571,7 +571,7 @@ export default function LogItemPage() {
         </div>
       </div>
 
-      {isMobile && <BottomNav />}
+      {isMobile && <BottomNav active="log" />}
     </div>
   );
 }
