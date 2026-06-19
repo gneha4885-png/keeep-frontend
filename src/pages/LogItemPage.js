@@ -325,6 +325,7 @@ export default function LogItemPage() {
       setMedicineTimes(['08:00']); setRepeatDaily(true);
     } catch (err) {
       setError(err.message || 'Something went wrong.');
+      alert('DEBUG ERROR: ' + (err?.message || 'unknown') + ' | Stack: ' + (err?.stack || 'none'));
     } finally { setLoading(false); }
   };
 
