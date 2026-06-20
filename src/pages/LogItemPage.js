@@ -37,17 +37,6 @@ async function requestNotifPermission() {
   return (await Notification.requestPermission()) === 'granted';
 }
 
-// ── Unlock audio for iOS (call on real user interaction) ──────
-let audioUnlocked = false;
-function unlockAudio() {
-  if (audioUnlocked) return;
-  try {
-    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-    audio.volume = 0;
-    audio.play().then(() => { audioUnlocked = true; }).catch(() => {});
-  } catch {}
-}
-
 // ── Play alert sound ────────────────────────────────────────
 function playAlertSound() {
   try {
@@ -262,12 +251,15 @@ export default function LogItemPage() {
 
   // reminder toggle (master on/off)
   const handleReminderToggle = async () => {
+    // toggle instantly for responsive UI — iOS can be slow/sticky on the await below
+    setReminderEnabled(p => !p);
     if (!reminderEnabled) {
       const granted = await requestNotifPermission();
       setNotifPermission(Notification.permission);
-      if (!granted) { setError('Notification permission denied.'); return; }
+      if (!granted) {
+        setError('Notification permission denied. Reminders won\'t alert you.');
+      }
     }
-    setReminderEnabled(p => !p);
   };
 
   const buildReminderISO = () => {
@@ -288,7 +280,6 @@ export default function LogItemPage() {
 
   // submit
   const handleSubmit = async () => {
-    unlockAudio();
     if (!description.trim()) { setError('Please describe the item and where you kept it.'); return; }
     setLoading(true); setError(''); setResult(null);
     try {
@@ -373,6 +364,19 @@ export default function LogItemPage() {
 
       {!isMobile && <Sidebar active="log" />}
 
+      {/* Mobile header — Logout button (matches Find/History pages) */}
+      {isMobile && (
+        <div style={{ background:C.white, borderBottom:`1px solid ${C.greenBorder}`, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <span style={{ fontSize:'18px', fontWeight:800, color:C.text }}>
+            K<span style={{color:C.green}}>e</span><span style={{color:'#6c63ff'}}>e</span><span style={{color:C.red}}>e</span>p
+          </span>
+          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }}
+            style={{ padding:'6px 12px', background:'#fff5f5', border:'1px solid #ffcdd2', borderRadius:'8px', color:'#e53935', fontSize:'12px', fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+            Logout
+          </button>
+        </div>
+      )}
+
       <div style={{ flex:1, background:C.greenBg, paddingBottom: isMobile ? '80px' : '40px', overflowY:'auto' }}>
 
         <div style={{ padding: isMobile ? '20px 16px 12px' : '28px 28px 16px' }}>
@@ -432,7 +436,7 @@ export default function LogItemPage() {
             <div style={card}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: reminderEnabled ? '12px' : 0 }}>
                 <span style={{ ...sLabel, marginBottom:0 }}>🔔 SET A REMINDER</span>
-                <div onClick={handleReminderToggle} style={{ width:'46px', height:'26px', borderRadius:'13px', background: reminderEnabled ? C.green : '#ccc', cursor:'pointer', position:'relative', transition:'background 0.2s', flexShrink:0 }}>
+                <div onClick={handleReminderToggle} role="switch" aria-checked={reminderEnabled} style={{ width:'46px', height:'26px', borderRadius:'13px', background: reminderEnabled ? C.green : '#ccc', cursor:'pointer', position:'relative', transition:'background 0.2s', flexShrink:0, touchAction:'manipulation' }}>
                   <div style={{ position:'absolute', top:'3px', width:'20px', height:'20px', borderRadius:'50%', background:'#fff', boxShadow:'0 1px 3px rgba(0,0,0,0.25)', transition:'transform 0.2s', transform: reminderEnabled ? 'translateX(22px)' : 'translateX(2px)' }} />
                 </div>
               </div>
