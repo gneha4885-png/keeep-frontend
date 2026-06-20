@@ -37,6 +37,17 @@ async function requestNotifPermission() {
   return (await Notification.requestPermission()) === 'granted';
 }
 
+// ── Unlock audio for iOS (call on real user interaction) ──────
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  try {
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audio.volume = 0;
+    audio.play().then(() => { audioUnlocked = true; }).catch(() => {});
+  } catch {}
+}
+
 // ── Play alert sound ────────────────────────────────────────
 function playAlertSound() {
   try {
@@ -277,6 +288,7 @@ export default function LogItemPage() {
 
   // submit
   const handleSubmit = async () => {
+    unlockAudio();
     if (!description.trim()) { setError('Please describe the item and where you kept it.'); return; }
     setLoading(true); setError(''); setResult(null);
     try {
