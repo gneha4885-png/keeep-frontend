@@ -22,7 +22,6 @@ function stripMarkdown(t) {
           .replace(/\n{2,}/g,'\n').trim();
 }
 
-
 function formatTime12h(timeStr) {
   if (!timeStr) return '';
   const [h, m] = timeStr.split(':').map(Number);
@@ -38,12 +37,22 @@ async function requestNotifPermission() {
   return (await Notification.requestPermission()) === 'granted';
 }
 
+// ── Play alert sound ────────────────────────────────────────
+function playAlertSound() {
+  try {
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audio.volume = 1.0;
+    audio.play().catch(() => {}); // ignore autoplay restrictions
+  } catch {}
+}
+
 // ── One-time reminder notification ─────────────────────────────
 function scheduleNotification(itemName, location, reminderISO) {
   const delay = new Date(reminderISO).getTime() - Date.now();
   if (delay <= 0) return;
   setTimeout(() => {
     if (Notification.permission === 'granted') {
+      playAlertSound();
       const n = new Notification('⏰ Keeep Reminder', {
         body: `"${itemName}" is in ${location}. Time to use it!`,
         icon: '/logo192.png', tag: `keeep-${itemName}`,
@@ -68,6 +77,7 @@ function scheduleMedicineNotification(itemName, location, timeStr, repeatDaily) 
 
   const fire = () => {
     if (Notification.permission === 'granted') {
+      playAlertSound();
       const n = new Notification('💊 Medicine Time!', {
         body: `Time to take "${itemName}" — kept in ${location}`,
         icon: '/logo192.png',
@@ -325,7 +335,6 @@ export default function LogItemPage() {
       setMedicineTimes(['08:00']); setRepeatDaily(true);
     } catch (err) {
       setError(err.message || 'Something went wrong.');
-     
     } finally { setLoading(false); }
   };
 
@@ -333,7 +342,7 @@ export default function LogItemPage() {
   const card     = { background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'14px', padding:'16px', marginBottom:'14px' };
   const sLabel   = { fontSize:'10px', fontWeight:700, color:C.textLight, letterSpacing:'1px', marginBottom:'10px', display:'block' };
 
- return (
+  return (
     <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', minHeight:'100vh', fontFamily:"'Segoe UI',sans-serif" }}>
 
       {/* Camera Modal */}
