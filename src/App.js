@@ -5,6 +5,7 @@ import FindItemPage from './pages/FindItemPage';
 import HistoryPage from './pages/HistoryPage';
 import useReminders from './hooks/useReminders';
 import './index.css';
+import useFcmToken from './hooks/useFcmToken';
 
 // ── PrivateRoute: uses localStorage token (matches your useSession) ───────
 function PrivateRoute({ children }) {
@@ -18,6 +19,7 @@ function PrivateRoute({ children }) {
 // ── Inner app: hooks must be inside a component ───────────────────────────
 function AppRoutes() {
   useReminders();
+  useFcmToken(); 
 
   return (
     <Routes>
